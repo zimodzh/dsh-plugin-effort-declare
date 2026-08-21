@@ -8,16 +8,16 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/dsh-plugin-effort-declare"><img alt="npm" src="https://img.shields.io/npm/v/dsh-plugin-effort-declare"></a>
-  <a href="https://github.com/zimodzh/dsh-plugin-effort-declare/commits/master"><img alt="last commit" src="https://img.shields.io/github/last-commit/zimodzh/dsh-plugin-effort-declare"></a>
-  <a href="https://github.com/zimodzh/dsh-plugin-effort-declare"><img alt="repo size" src="https://img.shields.io/github/repo-size/zimodzh/dsh-plugin-effort-declare"></a>
-  <a href="./LICENSE"><img alt="license" src="https://img.shields.io/github/license/zimodzh/dsh-plugin-effort-declare"></a>
-  <a href="https://github.com/deepseek-ai/deepseek-harness"><img alt="Agent" src="https://img.shields.io/badge/Agent-Deepseek%20Harness-000000"></a>
+  <a href="https://www.npmjs.com/package/dsh-plugin-effort-declare" target="_blank" rel="noopener noreferrer"><img alt="npm" src="https://img.shields.io/npm/v/dsh-plugin-effort-declare"></a>
+  <a href="https://github.com/zimodzh/dsh-plugin-effort-declare/commits/master" target="_blank" rel="noopener noreferrer"><img alt="last commit" src="https://img.shields.io/github/last-commit/zimodzh/dsh-plugin-effort-declare"></a>
+  <a href="https://github.com/zimodzh/dsh-plugin-effort-declare" target="_blank" rel="noopener noreferrer"><img alt="repo size" src="https://img.shields.io/github/repo-size/zimodzh/dsh-plugin-effort-declare"></a>
+  <a href="./LICENSE" target="_blank" rel="noopener noreferrer"><img alt="license" src="https://img.shields.io/github/license/zimodzh/dsh-plugin-effort-declare"></a>
+  <a href="https://github.com/deepseek-ai/deepseek-harness" target="_blank" rel="noopener noreferrer"><img alt="Agent" src="https://img.shields.io/badge/Agent-Deepseek%20Harness-000000"></a>
 </p>
 
 给自己添加的 OpenAI 兼容模型补上「推理强度」选项，对话里的 Effort 行就会出现。
 
-> 这是社区插件，不是 DeepSeek 官方项目，也未获官方背书。需要 DeepSeek Harness **0.1.0-rc.8 及以上**。
+> 这是社区维护的第三方插件，不是 DeepSeek 官方项目，也未获官方背书。需要 DeepSeek Harness **0.1.0-rc.8 及以上**。
 
 ## 它解决什么
 

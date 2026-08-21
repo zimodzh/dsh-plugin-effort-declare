@@ -8,16 +8,16 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/dsh-plugin-effort-declare"><img alt="npm" src="https://img.shields.io/npm/v/dsh-plugin-effort-declare"></a>
-  <a href="https://github.com/zimodzh/dsh-plugin-effort-declare/commits/master"><img alt="last commit" src="https://img.shields.io/github/last-commit/zimodzh/dsh-plugin-effort-declare"></a>
-  <a href="https://github.com/zimodzh/dsh-plugin-effort-declare"><img alt="repo size" src="https://img.shields.io/github/repo-size/zimodzh/dsh-plugin-effort-declare"></a>
-  <a href="./LICENSE"><img alt="license" src="https://img.shields.io/github/license/zimodzh/dsh-plugin-effort-declare"></a>
-  <a href="https://github.com/deepseek-ai/deepseek-harness"><img alt="Agent" src="https://img.shields.io/badge/Agent-Deepseek%20Harness-000000"></a>
+  <a href="https://www.npmjs.com/package/dsh-plugin-effort-declare" target="_blank" rel="noopener noreferrer"><img alt="npm" src="https://img.shields.io/npm/v/dsh-plugin-effort-declare"></a>
+  <a href="https://github.com/zimodzh/dsh-plugin-effort-declare/commits/master" target="_blank" rel="noopener noreferrer"><img alt="last commit" src="https://img.shields.io/github/last-commit/zimodzh/dsh-plugin-effort-declare"></a>
+  <a href="https://github.com/zimodzh/dsh-plugin-effort-declare" target="_blank" rel="noopener noreferrer"><img alt="repo size" src="https://img.shields.io/github/repo-size/zimodzh/dsh-plugin-effort-declare"></a>
+  <a href="./LICENSE" target="_blank" rel="noopener noreferrer"><img alt="license" src="https://img.shields.io/github/license/zimodzh/dsh-plugin-effort-declare"></a>
+  <a href="https://github.com/deepseek-ai/deepseek-harness" target="_blank" rel="noopener noreferrer"><img alt="Agent" src="https://img.shields.io/badge/Agent-Deepseek%20Harness-000000"></a>
 </p>
 
 Add reasoning-effort options to OpenAI-compatible models you added yourself, so the Effort row shows up in the composer.
 
-> This is a community plugin. It is not an official DeepSeek project and is not endorsed by DeepSeek. Requires DeepSeek Harness **0.1.0-rc.8 or later**.
+> This is a community-maintained third-party plugin. It is not an official DeepSeek project and is not endorsed by DeepSeek. Requires DeepSeek Harness **0.1.0-rc.8 or later**.
 
 ## Why
 
