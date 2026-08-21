@@ -22,7 +22,8 @@ pnpm test
 3. Clear: unsetting `reasoningEfforts` keeps `id` / `name`.
 4. Validation: empty object, Off-only, and unknown effort keys return an error code without throwing.
 5. List filter: catalog, `deepseek-official`, and non-completions protocols are not editable.
-6. `thinkingFormat` fallback list matches llm-pi-ai 0.1.0-rc.8.
+6. `thinkingFormat` test pin matches llm-pi-ai 0.1.0-rc.8; UI choices are empty when the live schema has no union.
 7. `loadDrafts` reads `user` not `value`; `cloneModels` skips non-objects; post-save revision bump; dirty merge; generation; dirty matches pathOps.
+8. `validateSaveDraft`: a schema failure blocks mutate; missing nodes are skipped.
 
 When you add a level, preset, or filter rule, add matching assertions here and keep the [CONTRIBUTING.en.md](../CONTRIBUTING.en.md) boundary in sync.

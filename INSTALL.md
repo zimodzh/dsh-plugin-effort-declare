@@ -39,6 +39,32 @@ dsh --profile web --dump-config
 
 输出里应出现 `dsh-plugin-effort-declare`。
 
+## 更新
+
+插件已发布到 npm。更新也走 `dsh plugin`（官方会把参数转给 pnpm），不要用 `npm update`。
+
+第三方 DSH 仍须先设置 `DSH_HOME`，与安装相同。
+
+已从 npm 安装过，升级到 semver 范围内的新版本：
+
+```bash
+dsh plugin --profile web update dsh-plugin-effort-declare
+```
+
+要最新正式版（含改依赖范围）：
+
+```bash
+dsh plugin --profile web add dsh-plugin-effort-declare@latest
+```
+
+然后重启 DSH。可用 `dsh --profile web --dump-config` 确认层还在。
+
+从 GitHub 装的：再执行一次下面的命令，或使用带 commit 的规格：
+
+```bash
+dsh plugin --profile web add github:zimodzh/dsh-plugin-effort-declare
+```
+
 ## 其他方式
 
 GitHub：

@@ -17,11 +17,11 @@ Cross-plugin work uses Cordis services only (`connection`, `settingsScope`, `set
 
 | File | Role |
 | --- | --- |
-| [`index.ts`](./index.ts) | Registers zh/en copy, CSS (`ctx.effect` insert/remove), and `settings.section` (id `effort-declare`, order 15). Subscribes in `apply` to `settings/document-updated` (`llm-pi-ai` only), `llm/adapters-updated`, and `connection/reset`. |
+| [`index.ts`](./index.ts) | Registers zh/en copy, CSS (`ctx.effect` insert/remove), and `settings.section` (id `effort-declare`, order 12). Subscribes in `apply` to the mirror `describe.subscribe`, `settings/document-updated` (`llm-pi-ai` only), `llm/adapters-updated`, and `connection/reset`. `locale: NS` lets the framework inject `t`; `inject` only returns `api` / `describe` / `schema` / `subscribeInvalidate`. |
 | [`EffortDeclareSection.tsx`](./EffortDeclareSection.tsx) | Route cards, presets, Off tri-state, advanced protocol switches, save and cancel. |
-| [`load-drafts.ts`](./load-drafts.ts) | Builds drafts from `llm.providers` + the settings mirror; drafts come from `user`, protocol classification may use `value`. |
+| [`load-drafts.ts`](./load-drafts.ts) | Builds drafts from `llm.providers` + the settings mirror; drafts come from `user`, protocol classification may use `value`. `thinkingFormat` choices come only from the live schema union. |
 | [`locales.ts`](./locales.ts) | Copy namespace `plugin-effort-declare`. |
 | [`effort-declare.module.css`](./effort-declare.module.css) | `--dsw-alias-*` tokens only, so dark theme stays correct. |
-| [`schema-ops.ts`](./schema-ops.ts) | Binds `settingsSchema` as plain callbacks so the service identity is not passed into React. |
+| [`schema-ops.ts`](./schema-ops.ts) | Binds `settingsSchema` as plain callbacks (including `validate`) so the service identity is not passed into React. |
 
 Visual language follows the official Models page, not `--ds-*` variables with light-mode fallbacks.

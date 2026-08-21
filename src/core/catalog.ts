@@ -3,9 +3,9 @@
  *
  * Levels match `@deepseek-ai/dsh-llm-pi-ai` catalog.ts `THINKING_LEVELS`.
  * Formats match `SUPPORTED_THINKING_FORMATS` in the same file (rc.8).
- * Runtime UI prefers the live settings schema union; these lists are the
- * fallback plus a test pin so a silent drift is a failing test, not a
- * second hand-maintained copy nobody notices.
+ * Tests pin these lists against llm-pi-ai. The settings page never offers
+ * the handwritten thinkingFormat list as writable choices — only the live
+ * schema union, plus a stored value that the union omitted.
  */
 
 /** Selectable reasoning levels, in pi-ai escalation order. */
@@ -28,7 +28,7 @@ export const THINKING_LEVELS_WITHOUT_OFF = THINKING_LEVELS.filter(
 
 /**
  * openai-completions thinkingFormat values from llm-pi-ai catalog.ts rc.8.
- * Tests pin this list; the settings page prefers schema union choices.
+ * Test pin only — not a writable UI fallback.
  */
 export const FALLBACK_THINKING_FORMATS = [
   'openai',

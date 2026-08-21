@@ -38,7 +38,7 @@ pnpm build
 
 提交前请说明改动是修 bug、增强 UI，还是对齐新的 DSH / pi-ai schema。中英文档一起改。根 README 和 [INSTALL.md](./INSTALL.md) 面向使用者；本文件与 `src/`、`tests/` 的 README 面向改代码的人。
 
-上游档位名与 `thinkingFormat` 枚举以 DSH 安装里 `llm-pi-ai` 的 schema / catalog 为准。仓库内有一份回退白名单，并由测试钉住；schema 漂移时应先改测试再改 UI。
+上游档位名与 `thinkingFormat` 枚举以 DSH 安装里 `llm-pi-ai` 的 schema / catalog 为准。仓库内有一份测试钉白名单；schema 漂移时应先改测试再改 UI 文案。不要把这份名单当作可写入下拉选项。
 
 ## 发布到 npm
 
@@ -51,6 +51,8 @@ pnpm publish
 ```
 
 `pnpm publish` 在 Git 有未提交改动时会失败。应先 commit（建议再 push），不要用 `--no-git-checks` 绕过。
+
+发布后用户用 `dsh plugin --profile web update dsh-plugin-effort-declare` 或 `add dsh-plugin-effort-declare@latest` 更新。作者无需在插件里实现更新命令；官方 `dsh plugin` 会把参数转给 pnpm。
 
 ## 安全
 

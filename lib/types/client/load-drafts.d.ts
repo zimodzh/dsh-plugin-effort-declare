@@ -15,6 +15,9 @@ export interface LoadDraftsResult {
 /**
  * First paint: `ensure()` (reads only from idle). Never treat ensure as refresh.
  * Callers that must not apply a stale settlement compare generation themselves.
+ *
+ * `formats` is the live schema union only. Empty means the dropdown has no
+ * writable choices (stored values stay visible via `thinkingFormatChoices`).
  */
 export declare function loadDrafts(api: Pick<IApiClient, 'llm'>, describe: Pick<SettingsDescribeFace, 'ensure' | 'getSnapshot'>, schema: SchemaOps): Promise<LoadDraftsResult>;
 //# sourceMappingURL=load-drafts.d.ts.map

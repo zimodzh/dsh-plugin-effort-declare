@@ -43,7 +43,13 @@ Do not use `npm install`. In a terminal:
 dsh plugin --profile web add dsh-plugin-effort-declare
 ```
 
-If you use third-party DSH, you must set `DSH_HOME` first, or the package lands in another directory. See the [install guide](./INSTALL.en.md).
+If you use third-party DSH, you must set `DSH_HOME` first, or the package lands in another directory. See the [install guide](./INSTALL.en.md). To update an npm install:
+
+```bash
+dsh plugin --profile web update dsh-plugin-effort-declare
+```
+
+Or `add dsh-plugin-effort-declare@latest`. Details: [install guide](./INSTALL.en.md) **Update**.
 
 Restart DSH, then open **Settings → Reasoning efforts**. Add a custom provider on the Models page first. GitHub, local folder, and uninstall: [install guide](./INSTALL.en.md).
 

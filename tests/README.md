@@ -22,7 +22,8 @@ pnpm test
 3. 清除声明：unset `reasoningEfforts` 后仍保留 `id` / `name`。
 4. 校验：空对象、只开 Off、未知档位键返回错误码且不抛。
 5. 列表过滤：catalog、`deepseek-official`、非 completions 协议不可编辑。
-6. `thinkingFormat` 回退列表与 llm-pi-ai 0.1.0-rc.8 一致。
+6. `thinkingFormat` 测试钉列表与 llm-pi-ai 0.1.0-rc.8 一致；schema 空时 UI 选项为空。
 7. `loadDrafts` 草稿来自 `user` 不是 `value`；`cloneModels` 跳过非对象行；保存后全卡 revision；脏卡合并；generation；dirty 与 pathOps 一致。
+8. `validateSaveDraft`：schema 失败则阻断 mutate；节点缺失则跳过。
 
 新增档位键、预设或过滤规则时，请在本文件补对等断言，并同步 [CONTRIBUTING.md](../CONTRIBUTING.md) 的边界。

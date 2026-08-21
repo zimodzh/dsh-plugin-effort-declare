@@ -39,6 +39,32 @@ dsh --profile web --dump-config
 
 The output should mention `dsh-plugin-effort-declare`.
 
+## Update
+
+The plugin is published to npm. Updates also go through `dsh plugin` (the official CLI forwards the rest of the line to pnpm). Do not use `npm update`.
+
+Third-party DSH still needs `DSH_HOME` set first, same as install.
+
+Already installed from npm, upgrade to the newest version in the existing semver range:
+
+```bash
+dsh plugin --profile web update dsh-plugin-effort-declare
+```
+
+Latest release, including rewriting the dependency range:
+
+```bash
+dsh plugin --profile web add dsh-plugin-effort-declare@latest
+```
+
+Then restart DSH. Use `dsh --profile web --dump-config` to confirm the layer is still present.
+
+Installed from GitHub: run `add` again, or pin a commit:
+
+```bash
+dsh plugin --profile web add github:zimodzh/dsh-plugin-effort-declare
+```
+
 ## Other methods
 
 GitHub:

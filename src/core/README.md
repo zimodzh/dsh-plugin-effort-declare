@@ -9,7 +9,7 @@
 
 本插件的领域逻辑：无 React、无 Cordis 服务实例。设置页与 Vitest 都只依赖这些纯函数，因此档位语义可以在不启动 DSH 的情况下回归。
 
-规范键名与 `thinkingFormat` 取值对齐 `@deepseek-ai/dsh-llm-pi-ai`（0.1.0-rc.8）。仓库内有回退白名单，并由测试钉住，避免 UI 与上游 schema 静默分叉。
+规范键名与 `thinkingFormat` 取值对齐 `@deepseek-ai/dsh-llm-pi-ai`（0.1.0-rc.8）。仓库内有测试钉白名单；UI 可选项只来自现场 schema union。
 
 ## 这个目录里有什么
 

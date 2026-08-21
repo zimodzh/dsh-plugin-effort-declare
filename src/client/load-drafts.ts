@@ -5,7 +5,6 @@
 import type { IApiClient, SettingsNamespaceView } from '@deepseek-ai/dsh-api-remotes/client'
 import type { SettingsDescribeFace } from '@deepseek-ai/dsh-client-ui-settings/client'
 import {
-  FALLBACK_THINKING_FORMATS,
   LLM_PI_AI_NS,
   SCHEMA_PROBE_ROUTE,
 } from '../core/catalog.ts'
@@ -29,6 +28,9 @@ export interface LoadDraftsResult {
 /**
  * First paint: `ensure()` (reads only from idle). Never treat ensure as refresh.
  * Callers that must not apply a stale settlement compare generation themselves.
+ *
+ * `formats` is the live schema union only. Empty means the dropdown has no
+ * writable choices (stored values stay visible via `thinkingFormatChoices`).
  */
 export async function loadDrafts(
   api: Pick<IApiClient, 'llm'>,
@@ -38,20 +40,20 @@ export async function loadDrafts(
   await describe.ensure()
   const mirrored = describe.getSnapshot()
   if (mirrored.view === undefined) {
-    return { writable: false, formats: [...FALLBACK_THINKING_FORMATS], drafts: [], error: mirrored.error ?? undefined }
+    return { writable: false, formats: [], drafts: [], error: mirrored.error ?? undefined }
   }
   const providersResponse = await api.llm.providers({})
   if (!providersResponse.result.ok) {
     return {
       writable: mirrored.view.writable,
-      formats: [...FALLBACK_THINKING_FORMATS],
+      formats: [],
       drafts: [],
       error: providersResponse.result.error.message,
     }
   }
   const namespaces = new Map(mirrored.view.namespaces.map((view: SettingsNamespaceView) => [view.ns, view]))
   const pi = namespaces.get(LLM_PI_AI_NS)
-  let formats: string[] = [...FALLBACK_THINKING_FORMATS]
+  let formats: string[] = []
   let schemaDefaultApi: string | undefined
   if (pi !== undefined) {
     try {
@@ -61,7 +63,7 @@ export async function loadDrafts(
       if (fromSchema.length > 0) formats = fromSchema
       schemaDefaultApi = schemaDefaultString(schema.nodeAtPath(root, ['providers', SCHEMA_PROBE_ROUTE, 'api']))
     } catch {
-      // Live schema walk is best-effort; fallback list is test-pinned.
+      // Live schema walk is best-effort; UI options stay empty rather than a handwritten list.
     }
   }
   const drafts: RouteDraft[] = []

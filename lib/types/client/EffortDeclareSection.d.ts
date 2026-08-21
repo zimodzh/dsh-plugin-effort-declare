@@ -5,14 +5,13 @@
 import { type ReactNode } from 'react';
 import type { IApiClient } from '@deepseek-ai/dsh-api-remotes/client';
 import type { SettingsDescribeFace } from '@deepseek-ai/dsh-client-ui-settings/client';
-import type { SchemaOps } from './schema-ops.ts';
+import { type SchemaOps } from './schema-ops.ts';
 import type { EffortDeclareKey } from './locales.ts';
 export type InvalidationSource = 'settings' | 'directory';
 export interface EffortDeclareSectionInjected {
     api: Pick<IApiClient, 'settings' | 'llm'>;
     describe: SettingsDescribeFace;
     schema: SchemaOps;
-    t: (key: EffortDeclareKey) => string;
     subscribeInvalidate: (listener: (source: InvalidationSource) => void) => () => void;
 }
 export interface EffortDeclareSectionProps extends Partial<EffortDeclareSectionInjected> {

@@ -9,7 +9,7 @@
 
 Domain logic for the plugin: no React, no Cordis service instances. The settings page and Vitest both depend on these pure functions, so effort semantics can regress without booting DSH.
 
-Canonical level names and `thinkingFormat` values follow `@deepseek-ai/dsh-llm-pi-ai` (0.1.0-rc.8). A fallback whitelist is pinned by tests so the UI cannot silently drift from the upstream schema.
+Canonical level names and `thinkingFormat` values follow `@deepseek-ai/dsh-llm-pi-ai` (0.1.0-rc.8). A whitelist is pinned by tests; UI choices come only from the live schema union.
 
 ## What's in this directory
 

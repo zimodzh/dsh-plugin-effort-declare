@@ -38,7 +38,7 @@ pnpm build
 
 Before sending a change, say whether it is a bugfix, UI improvement, or an alignment with a newer DSH / pi-ai schema. Update zh and en docs together. The root README and [INSTALL.en.md](./INSTALL.en.md) are for users; this file and the READMEs under `src/` and `tests/` are for people changing code.
 
-Canonical level names and `thinkingFormat` enums come from the installed `llm-pi-ai` schema / catalog. The repo keeps a fallback whitelist pinned by tests; if the schema drifts, update the tests first, then the UI.
+Canonical level names and `thinkingFormat` enums come from the installed `llm-pi-ai` schema / catalog. The repo keeps a whitelist pinned by tests; if the schema drifts, update the tests first, then UI copy. Do not offer that list as writable dropdown choices.
 
 ## Publishing to npm
 
@@ -51,6 +51,8 @@ pnpm publish
 ```
 
 `pnpm publish` fails on an unclean Git tree. Commit first (and preferably push). Do not pass `--no-git-checks`.
+
+After publish, users update with `dsh plugin --profile web update dsh-plugin-effort-declare` or `add dsh-plugin-effort-declare@latest`. Authors do not implement an update command; official `dsh plugin` forwards the rest of the line to pnpm.
 
 ## Security
 

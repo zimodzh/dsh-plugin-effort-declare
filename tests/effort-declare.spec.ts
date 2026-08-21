@@ -21,7 +21,7 @@ import {
   thinkingFormatChoices,
 } from '../src/core/drafts.ts'
 import { loadDrafts } from '../src/client/load-drafts.ts'
-import type { SchemaOps } from '../src/client/schema-ops.ts'
+import { validateSaveDraft, type SchemaOps } from '../src/client/schema-ops.ts'
 import type { IApiClient } from '@deepseek-ai/dsh-api-remotes/client'
 import type { SettingsDescribeFace } from '@deepseek-ai/dsh-client-ui-settings/client'
 import {
@@ -269,6 +269,7 @@ const stubSchema: SchemaOps = {
   nodeAtPath: () => undefined,
   getPath,
   hasPath,
+  validate: () => undefined,
 }
 
 function pokeDraft() {
@@ -505,6 +506,148 @@ describe('loadDrafts', () => {
     expect(result.drafts[0]?.compatPresent).toBe(false)
     expect(result.drafts[0]?.compat).toEqual({})
     expect(result.drafts[0]?.models[0]?.id).toBe('user')
+    expect(result.formats).toEqual([])
+  })
+
+  it('does not offer the handwritten thinkingFormat list when the live union is empty', async () => {
+    const describe = {
+      ensure: async () => {},
+      getSnapshot: () => ({
+        status: 'ready' as const,
+        error: null,
+        view: {
+          writable: true,
+          hasDocument: true,
+          namespaces: [{
+            ns: 'llm-pi-ai',
+            schema: {},
+            value: {},
+            user: {},
+            applies: 'live' as const,
+            secrets: [],
+            revision: 1,
+          }],
+        },
+      }),
+    } satisfies Pick<SettingsDescribeFace, 'ensure' | 'getSnapshot'>
+
+    const api = {
+      llm: {
+        providers: async () => ({
+          result: {
+            ok: true as const,
+            value: { providers: [] },
+          },
+        }),
+      },
+    }
+
+    const emptyUnion: SchemaOps = {
+      ...stubSchema,
+      nodeAtPath: () => ({ type: 'union', list: [] }),
+    }
+    const thrown: SchemaOps = {
+      ...stubSchema,
+      rehydrate: () => {
+        throw new Error('schema missing')
+      },
+    }
+    expect((await loadDrafts(api as Pick<IApiClient, 'llm'>, describe, emptyUnion)).formats).toEqual([])
+    expect((await loadDrafts(api as Pick<IApiClient, 'llm'>, describe, thrown)).formats).toEqual([])
+    expect((await loadDrafts(api as Pick<IApiClient, 'llm'>, describe, stubSchema)).formats).toEqual([])
+  })
+
+  it('reads thinkingFormat choices from a live schema union', async () => {
+    const describe = {
+      ensure: async () => {},
+      getSnapshot: () => ({
+        status: 'ready' as const,
+        error: null,
+        view: {
+          writable: true,
+          hasDocument: true,
+          namespaces: [{
+            ns: 'llm-pi-ai',
+            schema: {},
+            value: {},
+            user: {},
+            applies: 'live' as const,
+            secrets: [],
+            revision: 1,
+          }],
+        },
+      }),
+    } satisfies Pick<SettingsDescribeFace, 'ensure' | 'getSnapshot'>
+
+    const api = {
+      llm: {
+        providers: async () => ({
+          result: {
+            ok: true as const,
+            value: { providers: [] },
+          },
+        }),
+      },
+    }
+
+    const live: SchemaOps = {
+      ...stubSchema,
+      nodeAtPath: (_root, path) => (
+        path[path.length - 1] === 'thinkingFormat'
+          ? { type: 'union', list: [{ value: 'deepseek' }, { value: 'openai' }] }
+          : undefined
+      ),
+    }
+    expect((await loadDrafts(api as Pick<IApiClient, 'llm'>, describe, live)).formats).toEqual([
+      'deepseek',
+      'openai',
+    ])
   })
 })
+
+describe('validateSaveDraft', () => {
+  it('returns schema.validate text and does not invent a second validator', () => {
+    const calls: unknown[] = []
+    const schema: SchemaOps = {
+      ...stubSchema,
+      nodeAtPath: (_root, path) => path[path.length - 1] === 'models' ? { type: 'array' } : undefined,
+      validate: (node, draft) => {
+        calls.push({ node, draft })
+        return Array.isArray(draft) ? undefined : 'bad models'
+      },
+    }
+    expect(validateSaveDraft(schema, {}, ['providers', 'poke'], [{ id: 'm1' }], {}, false)).toBeUndefined()
+    expect(validateSaveDraft(schema, {}, ['providers', 'poke'], { not: 'array' }, {}, false)).toBe('bad models')
+    expect(calls).toHaveLength(2)
+  })
+
+  it('validates compat only when writing compat; missing nodes skip (do not mutate-block)', () => {
+    const schema: SchemaOps = {
+      ...stubSchema,
+      nodeAtPath: (_root, path) => path[path.length - 1] === 'compat' ? { type: 'object' } : undefined,
+      validate: (_node, draft) => (
+        typeof draft === 'object' && draft !== null && 'thinkingFormat' in draft
+        && (draft as { thinkingFormat: string }).thinkingFormat === 'nope'
+          ? 'unknown format'
+          : undefined
+      ),
+    }
+    expect(validateSaveDraft(schema, {}, ['providers', 'poke'], [], { thinkingFormat: 'nope' }, false)).toBeUndefined()
+    expect(validateSaveDraft(schema, {}, ['providers', 'poke'], [], { thinkingFormat: 'nope' }, true)).toBe('unknown format')
+    expect(validateSaveDraft(stubSchema, {}, ['providers', 'poke'], [], { thinkingFormat: 'nope' }, true)).toBeUndefined()
+  })
+
+  it('blocks mutate when validate fails: callers must skip settings.mutate', () => {
+    const schema: SchemaOps = {
+      ...stubSchema,
+      nodeAtPath: () => ({ type: 'array' }),
+      validate: () => 'rejected by schema',
+    }
+    const error = validateSaveDraft(schema, {}, ['providers', 'poke'], [], {}, false)
+    expect(error).toBe('rejected by schema')
+    const mutate = error === undefined
+    expect(mutate).toBe(false)
+  })
+})
+
 

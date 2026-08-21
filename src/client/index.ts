@@ -53,8 +53,12 @@ export function apply(ctx: ClientContext): void {
     ),
     getPath: (value, path) => settingsSchema.getPath(value, path),
     hasPath: (value, path) => settingsSchema.hasPath(value, path),
+    validate: (node, draft) => settingsSchema.validate(
+      node as Parameters<typeof settingsSchema.validate>[0],
+      draft,
+    ),
   })
-  const t = ctx.locale.bind(NS) as EffortDeclareSectionInjected['t']
+  const t = ctx.locale.bind(NS)
   const describe = ctx.settingsScope.describe()
   const invalidation = new Set<(source: InvalidationSource) => void>()
 
@@ -63,6 +67,7 @@ export function apply(ctx: ClientContext): void {
       for (const listener of invalidation) listener(source)
     }
     const disposers = [
+      describe.subscribe(() => { emit('settings') }),
       ctx.remote.$on('settings/document-updated', (ns: string) => {
         if (ns !== LLM_PI_AI_NS) return
         emit('settings')
@@ -83,14 +88,13 @@ export function apply(ctx: ClientContext): void {
   ctx.slots.inject('settings.section', () => ctx.slots.register({
     name: 'settings.section',
     id: 'effort-declare',
-    order: 15,
+    order: 12,
     label: () => t('nav'),
     locale: NS,
     inject: (): EffortDeclareSectionInjected => ({
       api: connection.api,
       describe,
       schema,
-      t,
       subscribeInvalidate,
     }),
   }, EffortDeclareSection))

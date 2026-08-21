@@ -31,7 +31,7 @@ import { buildSaveOps } from '../core/path-ops.ts'
 import { cloneModels, cloneObject } from '../core/paths.ts'
 import { modelEffortError } from '../core/validate.ts'
 import { loadDrafts } from './load-drafts.ts'
-import type { SchemaOps } from './schema-ops.ts'
+import { validateSaveDraft, type SchemaOps } from './schema-ops.ts'
 import type { EffortDeclareKey } from './locales.ts'
 import css from './effort-declare.module.css'
 
@@ -41,7 +41,6 @@ export interface EffortDeclareSectionInjected {
   api: Pick<IApiClient, 'settings' | 'llm'>
   describe: SettingsDescribeFace
   schema: SchemaOps
-  t: (key: EffortDeclareKey) => string
   subscribeInvalidate: (listener: (source: InvalidationSource) => void) => () => void
 }
 
@@ -341,7 +340,7 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
     void loadDrafts(api, describe, schema).then((result) => {
       if (!generationIsCurrent(generationRef, generation)) return
       setWritable(result.writable)
-      if (result.formats.length > 0) setFormats(result.formats)
+      setFormats(result.formats)
       if (result.error !== undefined) {
         setStatus('error')
         setError(result.error)
@@ -350,9 +349,13 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
       const merged = mergeLoadedDrafts(draftsRef.current, result.drafts, { preserveDirty })
       setDrafts(merged.drafts)
       if (merged.conflicted.length > 0) {
-        setNotices(Object.fromEntries(
-          merged.conflicted.map(provider => [provider, { kind: 'conflict' as const, text: t('dirtyConflict') }]),
-        ))
+        setNotices(current => {
+          const next = { ...current }
+          for (const provider of merged.conflicted) {
+            next[provider] = { kind: 'conflict', text: t('dirtyConflict') }
+          }
+          return next
+        })
       }
       setStatus('ready')
     }, (failure: unknown) => {
@@ -366,21 +369,32 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
 
   useEffect(() => {
     if (props.subscribeInvalidate === undefined) return undefined
-    return props.subscribeInvalidate(() => { reload(true) })
+    return props.subscribeInvalidate((source) => {
+      if (source === 'settings' || source === 'directory') reload(true)
+    })
   }, [props.subscribeInvalidate, reload])
 
+  const patchNotice = (provider: string, notice: CardNotice | undefined): void => {
+    setNotices(current => {
+      const copy = { ...current }
+      if (notice === undefined) delete copy[provider]
+      else copy[provider] = notice
+      return copy
+    })
+  }
+
   const save = async (draft: RouteDraft): Promise<void> => {
-    if (api === undefined || describe === undefined) return
+    if (api === undefined || describe === undefined || schema === undefined) return
     if (status === 'loading' || busyRoute !== null) return
     const blocking = draft.models
       .map(row => errorText(modelEffortError(row), t))
       .find(text => text !== undefined)
     if (blocking !== undefined) {
-      setNotices({ [draft.provider]: { kind: 'error', text: blocking } })
+      patchNotice(draft.provider, { kind: 'error', text: blocking })
       return
     }
     setBusyRoute(draft.provider)
-    setNotices({})
+    patchNotice(draft.provider, undefined)
     try {
       const ops = buildSaveOps({
         settingsPath: draft.settingsPath,
@@ -393,18 +407,44 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
         setDrafts(current => current.map(row => row.provider === draft.provider ? alignDraft(row) : row))
         return
       }
+      const willWriteCompat = ops.some(op => (
+        op.path.length > draft.settingsPath.length && op.path[draft.settingsPath.length] === 'compat'
+      ))
+      const pi = describe.getSnapshot().view?.namespaces.find(view => view.ns === LLM_PI_AI_NS)
+      if (pi !== undefined) {
+        let root: unknown
+        try {
+          root = schema.rehydrate(pi.schema)
+        } catch {
+          root = undefined
+        }
+        if (root !== undefined) {
+          const schemaError = validateSaveDraft(
+            schema,
+            root,
+            draft.settingsPath,
+            draft.models,
+            draft.compat,
+            willWriteCompat,
+          )
+          if (schemaError !== undefined) {
+            patchNotice(draft.provider, { kind: 'error', text: schemaError })
+            return
+          }
+        }
+      }
       const response = await api.settings.mutate({
         ns: LLM_PI_AI_NS,
         ops,
         expectedRevision: draft.revision,
       })
       if (!response.result.ok) {
-        setNotices({
-          [draft.provider]: {
-            kind: 'error',
-            text: response.result.error.code === 'settings-conflict' ? t('conflict') : response.result.error.message,
-          },
+        const conflict = response.result.error.code === 'settings-conflict'
+        patchNotice(draft.provider, {
+          kind: conflict ? 'conflict' : 'error',
+          text: conflict ? t('conflict') : response.result.error.message,
         })
+        if (conflict) reload(true)
         return
       }
       const view = response.result.value
@@ -413,13 +453,11 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
         user: view.user ?? {},
         revision: view.revision,
       }))
-      setNotices({ [draft.provider]: { kind: 'saved', text: t('saved') } })
+      patchNotice(draft.provider, { kind: 'saved', text: t('saved') })
     } catch (failure) {
-      setNotices({
-        [draft.provider]: {
-          kind: 'error',
-          text: failure instanceof Error ? failure.message : t('loadError'),
-        },
+      patchNotice(draft.provider, {
+        kind: 'error',
+        text: failure instanceof Error ? failure.message : t('loadError'),
       })
     } finally {
       setBusyRoute(null)
@@ -429,6 +467,10 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
   const showLoading = status === 'loading' && drafts.length === 0
   const showEmpty = status === 'ready' && drafts.length === 0
   const showList = drafts.length > 0
+  const hasCardFailure = Object.values(notices).some(
+    notice => notice.kind === 'conflict' || notice.kind === 'error',
+  )
+  const showReload = status === 'error' || hasCardFailure || showEmpty || !writable || status === 'loading' || showList
 
   return (
     <div className={css.section}>
@@ -437,7 +479,7 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
       {!writable && status === 'ready' ? <p className={css.notice}>{t('readOnly')}</p> : null}
       {showLoading ? <p className={css.intro}>{t('loading')}</p> : null}
       {status === 'error' ? <p className={css.error}>{error}</p> : null}
-      {status === 'error'
+      {showReload
         ? (
           <button type="button" className={css.secondaryButton} onClick={() => { reload(true) }}>{t('reload')}</button>
         )
@@ -464,20 +506,12 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
                 notice={notices[draft.provider]}
                 t={t}
                 onChange={(next) => {
-                  setNotices(current => {
-                    const copy = { ...current }
-                    delete copy[next.provider]
-                    return copy
-                  })
+                  patchNotice(next.provider, undefined)
                   setDrafts(current => current.map(row => row.provider === next.provider ? next : row))
                 }}
                 onSave={(next) => { void save(next) }}
                 onCancel={(next) => {
-                  setNotices(current => {
-                    const copy = { ...current }
-                    delete copy[next.provider]
-                    return copy
-                  })
+                  patchNotice(next.provider, undefined)
                   setDrafts(current => current.map(row => row.provider === next.provider
                     ? {
                         ...row,

@@ -43,7 +43,13 @@
 dsh plugin --profile web add dsh-plugin-effort-declare
 ```
 
-若使用第三方DSH，必须先设置 `DSH_HOME`，否则会装到另一份目录。步骤见 [安装说明](./INSTALL.md)。
+若使用第三方DSH，必须先设置 `DSH_HOME`，否则会装到另一份目录。步骤见 [安装说明](./INSTALL.md)。更新已安装的 npm 包：
+
+```bash
+dsh plugin --profile web update dsh-plugin-effort-declare
+```
+
+或 `add dsh-plugin-effort-declare@latest`。详见 [安装说明](./INSTALL.md) 的「更新」。
 
 装完后重启 DSH，打开 **设置 → 推理档位**。请先在「模型」页添加过第三方提供方。GitHub、本地文件夹和卸载也在 [安装说明](./INSTALL.md)。
 
