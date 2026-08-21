@@ -25,4 +25,4 @@ pnpm test
 6. `thinkingFormat` 回退列表与 llm-pi-ai 0.1.0-rc.8 一致。
 7. `loadDrafts` 草稿来自 `user` 不是 `value`；`cloneModels` 跳过非对象行；保存后全卡 revision；脏卡合并；generation；dirty 与 pathOps 一致。
 
-新增档位键、预设或过滤规则时，请在本文件补对等断言，并同步根 README 的「不做什么」边界。
+新增档位键、预设或过滤规则时，请在本文件补对等断言，并同步 [CONTRIBUTING.md](../CONTRIBUTING.md) 的边界。

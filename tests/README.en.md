@@ -25,4 +25,4 @@ pnpm test
 6. `thinkingFormat` fallback list matches llm-pi-ai 0.1.0-rc.8.
 7. `loadDrafts` reads `user` not `value`; `cloneModels` skips non-objects; post-save revision bump; dirty merge; generation; dirty matches pathOps.
 
-When you add a level, preset, or filter rule, add matching assertions here and keep the root README “what it does not do” boundary in sync.
+When you add a level, preset, or filter rule, add matching assertions here and keep the [CONTRIBUTING.en.md](../CONTRIBUTING.en.md) boundary in sync.
