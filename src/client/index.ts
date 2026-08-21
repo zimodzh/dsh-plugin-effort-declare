@@ -1,7 +1,6 @@
 /**
  * dsh-plugin-effort-declare — browser half: settings.section for per-model
- * reasoning effort declarations. Wiring failures are logged, never thrown —
- * a throwing apply takes down the whole web shell.
+ * reasoning effort declarations.
  */
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 import type { ConnectionHandle } from '@deepseek-ai/dsh-api-remotes/client'
@@ -9,9 +8,11 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import { EffortDeclareSection } from './EffortDeclareSection.tsx'
-import type { EffortDeclareSectionInjected } from './EffortDeclareSection.tsx'
+import type { EffortDeclareSectionInjected, InvalidationSource } from './EffortDeclareSection.tsx'
 import { bindSchema } from './schema-ops.ts'
+import { LLM_PI_AI_NS } from '../core/catalog.ts'
 import { NS, en, zh, type EffortDeclareKey } from './locales.ts'
+import { cssTagId, cssText } from './effort-declare.module.css'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
@@ -22,50 +23,75 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 
 export const inject = ['slots', 'locale', 'connection', 'remote', 'settingsScope', 'settingsSchema']
 
-const LOG = '[dsh-plugin-effort-declare]'
+const PLUGIN_ID = 'dsh-plugin-effort-declare'
+
+function mountPluginCss(): () => void {
+  if (typeof document === 'undefined') return () => {}
+  const selector = `style[data-plugin-css=${JSON.stringify(cssTagId)}]`
+  let tag = document.querySelector(selector) as HTMLStyleElement | null
+  if (tag === null) {
+    tag = document.createElement('style')
+    tag.dataset.plugin = PLUGIN_ID
+    tag.dataset.pluginCss = cssTagId
+    document.head.appendChild(tag)
+  }
+  tag.textContent = cssText
+  return () => { tag?.remove() }
+}
 
 export function apply(ctx: ClientContext): void {
-  try {
-    ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-plugin-effort-declare: dictionaries')
+  ctx.effect(() => ctx.locale.register(NS, { zh, en }), `${PLUGIN_ID}: dictionaries`)
+  ctx.effect(() => mountPluginCss(), `${PLUGIN_ID}: css`)
 
-    const connection = ctx.get('connection') as ConnectionHandle
-    const settingsSchema = ctx.settingsSchema
-    const schema = bindSchema({
-      rehydrate: serialized => settingsSchema.rehydrate(serialized),
-      nodeAtPath: (root, path) => settingsSchema.nodeAtPath(
-        root as Parameters<typeof settingsSchema.nodeAtPath>[0],
-        path,
-      ),
-      getPath: (value, path) => settingsSchema.getPath(value, path),
-      hasPath: (value, path) => settingsSchema.hasPath(value, path),
-    })
-    const t = ctx.locale.bind(NS) as EffortDeclareSectionInjected['t']
-    const injected = (): EffortDeclareSectionInjected => ({
+  const connection = ctx.get('connection') as ConnectionHandle
+  const settingsSchema = ctx.settingsSchema
+  const schema = bindSchema({
+    rehydrate: serialized => settingsSchema.rehydrate(serialized),
+    nodeAtPath: (root, path) => settingsSchema.nodeAtPath(
+      root as Parameters<typeof settingsSchema.nodeAtPath>[0],
+      path,
+    ),
+    getPath: (value, path) => settingsSchema.getPath(value, path),
+    hasPath: (value, path) => settingsSchema.hasPath(value, path),
+  })
+  const t = ctx.locale.bind(NS) as EffortDeclareSectionInjected['t']
+  const describe = ctx.settingsScope.describe()
+  const invalidation = new Set<(source: InvalidationSource) => void>()
+
+  ctx.effect(() => {
+    const emit = (source: InvalidationSource) => {
+      for (const listener of invalidation) listener(source)
+    }
+    const disposers = [
+      ctx.remote.$on('settings/document-updated', (ns: string) => {
+        if (ns !== LLM_PI_AI_NS) return
+        emit('settings')
+      }),
+      ctx.remote.$on('llm/adapters-updated', () => { emit('directory') }),
+      ctx.on('connection/reset', () => { emit('directory') }),
+    ]
+    return () => {
+      for (const dispose of disposers) dispose()
+    }
+  }, `${PLUGIN_ID}: invalidations`)
+
+  const subscribeInvalidate: EffortDeclareSectionInjected['subscribeInvalidate'] = (listener) => {
+    invalidation.add(listener)
+    return () => { invalidation.delete(listener) }
+  }
+
+  ctx.slots.inject('settings.section', () => ctx.slots.register({
+    name: 'settings.section',
+    id: 'effort-declare',
+    order: 15,
+    label: () => t('nav'),
+    locale: NS,
+    inject: (): EffortDeclareSectionInjected => ({
       api: connection.api,
-      describe: ctx.settingsScope.describe(),
+      describe,
       schema,
       t,
-      onInvalidate: (listener) => {
-        const disposers = [
-          ctx.remote.$on('settings/document-updated', listener),
-          ctx.remote.$on('llm/adapters-updated', listener),
-          ctx.on('connection/reset', listener),
-        ]
-        return () => {
-          for (const dispose of disposers) dispose()
-        }
-      },
-    })
-
-    ctx.slots.inject('settings.section', () => ctx.slots.register({
-      name: 'settings.section',
-      id: 'effort-declare',
-      order: 15,
-      label: () => t('nav'),
-      locale: NS,
-      inject: injected,
-    }, EffortDeclareSection))
-  } catch (error) {
-    console.error(LOG, 'apply failed', error)
-  }
+      subscribeInvalidate,
+    }),
+  }, EffortDeclareSection))
 }

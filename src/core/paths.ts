@@ -38,8 +38,8 @@ export function cloneObject(value: unknown): Record<string, unknown> {
   return isPlainObject(value) ? structuredClone(value) : {}
 }
 
-/** Structured clone of a models array; non-arrays become `[]`. */
+/** Structured clone of a models array; non-arrays and non-object rows are skipped. */
 export function cloneModels(value: unknown): Record<string, unknown>[] {
   if (!Array.isArray(value)) return []
-  return value.map((row) => (isPlainObject(row) ? structuredClone(row) : { id: '' }))
+  return value.flatMap((row) => (isPlainObject(row) ? [structuredClone(row)] : []))
 }

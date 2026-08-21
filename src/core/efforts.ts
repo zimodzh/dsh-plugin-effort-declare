@@ -70,6 +70,10 @@ export function validateReasoningEfforts(efforts: unknown): 'empty' | 'off-only'
   }
   if (typeof efforts !== 'object' || Array.isArray(efforts)) return 'empty'
   const record = efforts as Record<string, unknown>
+  const known = new Set<string>(THINKING_LEVELS)
+  for (const key of Object.keys(record)) {
+    if (!known.has(key)) return 'bad-wire'
+  }
   const declared = THINKING_LEVELS.flatMap((level) => {
     if (!(level in record) || record[level] === undefined) return []
     return [[level, record[level]] as const]

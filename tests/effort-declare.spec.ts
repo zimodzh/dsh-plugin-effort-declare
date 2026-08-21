@@ -9,6 +9,21 @@ import {
 } from '../src/core/efforts.ts'
 import { classifyRoute, unionStringChoices } from '../src/core/filter.ts'
 import { buildSaveOps, pathOps } from '../src/core/path-ops.ts'
+import { cloneModels, getPath, hasPath } from '../src/core/paths.ts'
+import {
+  alignDraft,
+  applySaveSuccess,
+  draftDirty,
+  generationIsCurrent,
+  mergeLoadedDrafts,
+  nextGeneration,
+  routeDraftFromUserProfile,
+  thinkingFormatChoices,
+} from '../src/core/drafts.ts'
+import { loadDrafts } from '../src/client/load-drafts.ts'
+import type { SchemaOps } from '../src/client/schema-ops.ts'
+import type { IApiClient } from '@deepseek-ai/dsh-api-remotes/client'
+import type { SettingsDescribeFace } from '@deepseek-ai/dsh-client-ui-settings/client'
 import {
   applyPresetCompat,
   applyPresetEfforts,
@@ -56,13 +71,17 @@ describe('presets', () => {
     })
     expect(readOff(DEEPSEEK_PRESET.efforts).mode).toBe('empty')
     expect(validateReasoningEfforts(DEEPSEEK_PRESET.efforts)).toBeUndefined()
-    const compat = applyPresetCompat({ extra: true }, DEEPSEEK_PRESET)
+    const compat = applyPresetCompat(
+      { extra: true, supportsReasoningEffort: false },
+      DEEPSEEK_PRESET,
+    )
     expect(compat.thinkingFormat).toBe('deepseek')
     expect(compat.supportsDeveloperRole).toBe(false)
+    expect(compat.supportsReasoningEffort).toBeUndefined()
     expect(compat.extra).toBe(true)
   })
 
-  it('OpenAI preset: four thinking levels, unsets thinkingFormat, does not force developer=false', () => {
+  it('OpenAI preset replaces the dialect trio; extra compat keys stay', () => {
     expect(OPENAI_PRESET.efforts).toEqual({
       minimal: 'minimal',
       low: 'low',
@@ -72,19 +91,27 @@ describe('presets', () => {
     expect(readOff(OPENAI_PRESET.efforts).mode).toBe('absent')
     expect(validateReasoningEfforts(OPENAI_PRESET.efforts)).toBeUndefined()
     const compat = applyPresetCompat(
-      { thinkingFormat: 'deepseek', supportsDeveloperRole: false },
+      { thinkingFormat: 'deepseek', supportsDeveloperRole: false, extra: true },
       OPENAI_PRESET,
     )
     expect(compat.thinkingFormat).toBeUndefined()
-    expect(compat.supportsDeveloperRole).toBe(false)
+    expect(compat.supportsDeveloperRole).toBeUndefined()
+    expect(compat.supportsReasoningEffort).toBeUndefined()
+    expect(compat.extra).toBe(true)
   })
 
-  it('toggle preset: off+high and supportsReasoningEffort false, with the same-wire warning', () => {
+  it('toggle preset unsets thinkingFormat/developer and sets supportsReasoningEffort false', () => {
     expect(TOGGLE_PRESET.efforts).toEqual({ off: null, high: 'high' })
     expect(TOGGLE_PRESET.warnSameWire).toBe(true)
     expect(validateReasoningEfforts(TOGGLE_PRESET.efforts)).toBeUndefined()
-    const compat = applyPresetCompat({}, TOGGLE_PRESET)
+    const compat = applyPresetCompat(
+      { thinkingFormat: 'deepseek', supportsDeveloperRole: false, extra: 1 },
+      TOGGLE_PRESET,
+    )
+    expect(compat.thinkingFormat).toBeUndefined()
+    expect(compat.supportsDeveloperRole).toBeUndefined()
     expect(compat.supportsReasoningEffort).toBe(false)
+    expect(compat.extra).toBe(1)
   })
 
   it('preset efforts spread onto existing model rows', () => {
@@ -120,6 +147,7 @@ describe('validation (never throws)', () => {
     expect(validateReasoningEfforts({ off: null })).toBe('off-only')
     expect(validateReasoningEfforts({ off: 'none' })).toBe('off-only')
     expect(validateReasoningEfforts({ low: null })).toBe('bad-wire')
+    expect(validateReasoningEfforts({ high: 'high', unknown: 'x' })).toBe('bad-wire')
     expect(validateReasoningEfforts(undefined)).toBeUndefined()
     expect(validateReasoningEfforts(false)).toBeUndefined()
   })
@@ -160,7 +188,7 @@ describe('path ops', () => {
       { ...before[1], reasoningEfforts: { high: 'high', max: 'max' } },
     ]
     const ops = buildSaveOps({
-      route: 'poke',
+      settingsPath: ['providers', 'poke'],
       beforeModels: before,
       afterModels: after,
       beforeCompat: { thinkingFormat: 'deepseek', supportsDeveloperRole: false },
@@ -235,3 +263,248 @@ describe('route filter', () => {
     )).toEqual({ editable: false, reason: 'not-pi-ai' })
   })
 })
+
+const stubSchema: SchemaOps = {
+  rehydrate: serialized => serialized,
+  nodeAtPath: () => undefined,
+  getPath,
+  hasPath,
+}
+
+function pokeDraft() {
+  return routeDraftFromUserProfile({
+    provider: 'poke',
+    displayName: 'Poke',
+    settingsPath: ['providers', 'poke'],
+    revision: 1,
+    userProfile: {
+      models: [{ id: 'm1', reasoningEfforts: { high: 'high' } }],
+      compat: { thinkingFormat: 'deepseek' },
+    },
+  })
+}
+
+describe('cloneModels', () => {
+  it('drops non-object rows instead of synthesizing { id: "" }', () => {
+    expect(cloneModels([{ id: 'ok' }, null, 'x', 1, ['arr']])).toEqual([{ id: 'ok' }])
+    expect(cloneModels(undefined)).toEqual([])
+  })
+})
+
+describe('draft dirty vs pathOps', () => {
+  it('treats key-order-only changes as clean', () => {
+    const draft = pokeDraft()
+    draft.compat = { thinkingFormat: 'deepseek' }
+    draft.originalCompat = { thinkingFormat: 'deepseek' }
+    expect(draftDirty(draft)).toBe(false)
+  })
+
+  it('alignDraft clears dirty when ops would be empty', () => {
+    const draft = pokeDraft()
+    draft.models = [{ id: 'm1', reasoningEfforts: { high: 'high' } }]
+    expect(draftDirty(alignDraft(draft))).toBe(false)
+  })
+})
+
+describe('applySaveSuccess / mergeLoadedDrafts / generation', () => {
+  it('bumps every card revision and realigns only the saved card', () => {
+    const a = pokeDraft()
+    const b = routeDraftFromUserProfile({
+      provider: 'other',
+      displayName: 'Other',
+      settingsPath: ['providers', 'other'],
+      revision: 1,
+      userProfile: {
+        models: [{ id: 'n1' }],
+        compat: { extra: true },
+      },
+    })
+    b.models = [{ id: 'n1', dirty: true }]
+    const next = applySaveSuccess([a, b], 'poke', {
+      revision: 4,
+      user: {
+        providers: {
+          poke: {
+            models: [{ id: 'm1', reasoningEfforts: { low: 'low' } }],
+            compat: { thinkingFormat: 'openai' },
+          },
+        },
+      },
+    })
+    expect(next[0]?.revision).toBe(4)
+    expect(next[1]?.revision).toBe(4)
+    expect(next[0]?.models).toEqual([{ id: 'm1', reasoningEfforts: { low: 'low' } }])
+    expect(next[0]?.compat.thinkingFormat).toBe('openai')
+    expect(next[1]?.models).toEqual([{ id: 'n1', dirty: true }])
+    expect(next[1]?.compat.extra).toBe(true)
+  })
+
+  it('preserves dirty models/compat and reports conflict', () => {
+    const current = pokeDraft()
+    current.models = [{ id: 'm1', reasoningEfforts: { max: 'max' } }]
+    const incoming = routeDraftFromUserProfile({
+      provider: 'poke',
+      displayName: 'Poke 2',
+      settingsPath: ['providers', 'poke'],
+      revision: 9,
+      userProfile: {
+        models: [{ id: 'm1', reasoningEfforts: { high: 'high' } }],
+        compat: { thinkingFormat: 'openai' },
+      },
+    })
+    const { drafts, conflicted } = mergeLoadedDrafts([current], [incoming], { preserveDirty: true })
+    expect(conflicted).toEqual(['poke'])
+    expect(drafts[0]?.models).toEqual([{ id: 'm1', reasoningEfforts: { max: 'max' } }])
+    expect(drafts[0]?.revision).toBe(9)
+    expect(drafts[0]?.originalModels).toEqual([{ id: 'm1', reasoningEfforts: { high: 'high' } }])
+    expect(drafts[0]?.displayName).toBe('Poke 2')
+  })
+
+  it('discards stale generation tokens', () => {
+    const holder = { current: 0 }
+    const first = nextGeneration(holder)
+    const second = nextGeneration(holder)
+    expect(generationIsCurrent(holder, first)).toBe(false)
+    expect(generationIsCurrent(holder, second)).toBe(true)
+  })
+
+  it('keeps an unknown thinkingFormat in the select options', () => {
+    expect(thinkingFormatChoices(['openai', 'deepseek'], 'custom-gateway')).toEqual([
+      'custom-gateway',
+      'openai',
+      'deepseek',
+    ])
+  })
+})
+
+describe('loadDrafts', () => {
+  it('reads drafts from user, not effective value, and keeps settingsPath', async () => {
+    const describe = {
+      ensure: async () => {},
+      getSnapshot: () => ({
+        status: 'ready' as const,
+        error: null,
+        view: {
+          writable: true,
+          hasDocument: true,
+          namespaces: [{
+            ns: 'llm-pi-ai',
+            schema: {},
+            value: {
+              providers: {
+                poke: {
+                  api: 'openai-completions',
+                  models: [{ id: 'from-value' }],
+                  compat: { thinkingFormat: 'from-value', leftover: true },
+                },
+              },
+            },
+            user: {
+              providers: {
+                poke: {
+                  models: [{ id: 'from-user', reasoningEfforts: { low: 'low' } }],
+                  compat: { thinkingFormat: 'deepseek' },
+                },
+              },
+            },
+            applies: 'live' as const,
+            secrets: [],
+            revision: 7,
+          }],
+        },
+      }),
+    } satisfies Pick<SettingsDescribeFace, 'ensure' | 'getSnapshot'>
+
+    const api = {
+      llm: {
+        providers: async () => ({
+          result: {
+            ok: true as const,
+            value: {
+              providers: [{
+                provider: 'poke',
+                displayName: 'Poke',
+                settingsNs: 'llm-pi-ai',
+                settingsPath: ['providers', 'poke'],
+                declared: true,
+                active: false,
+              }],
+            },
+          },
+        }),
+      },
+    }
+
+    const result = await loadDrafts(api as Pick<IApiClient, 'llm'>, describe, stubSchema)
+    expect(result.error).toBeUndefined()
+    expect(result.drafts).toHaveLength(1)
+    expect(result.drafts[0]?.models[0]?.id).toBe('from-user')
+    expect(result.drafts[0]?.compat.thinkingFormat).toBe('deepseek')
+    expect(result.drafts[0]?.compat.leftover).toBeUndefined()
+    expect(result.drafts[0]?.compatPresent).toBe(true)
+    expect(result.drafts[0]?.settingsPath).toEqual(['providers', 'poke'])
+    expect(result.drafts[0]?.revision).toBe(7)
+  })
+
+  it('does not treat missing user compat as present even if value has it', async () => {
+    const describe = {
+      ensure: async () => {},
+      getSnapshot: () => ({
+        status: 'ready' as const,
+        error: null,
+        view: {
+          writable: true,
+          hasDocument: true,
+          namespaces: [{
+            ns: 'llm-pi-ai',
+            schema: {},
+            value: {
+              providers: {
+                poke: {
+                  api: 'openai-completions',
+                  models: [{ id: 'base' }],
+                  compat: { thinkingFormat: 'deepseek' },
+                },
+              },
+            },
+            user: {
+              providers: {
+                poke: {
+                  models: [{ id: 'user' }],
+                },
+              },
+            },
+            applies: 'live' as const,
+            secrets: [],
+            revision: 1,
+          }],
+        },
+      }),
+    } satisfies Pick<SettingsDescribeFace, 'ensure' | 'getSnapshot'>
+
+    const api = {
+      llm: {
+        providers: async () => ({
+          result: {
+            ok: true as const,
+            value: {
+              providers: [{
+                provider: 'poke',
+                displayName: 'Poke',
+                settingsNs: 'llm-pi-ai',
+                settingsPath: ['providers', 'poke'],
+                declared: true,
+              }],
+            },
+          },
+        }),
+      },
+    }
+
+    const result = await loadDrafts(api as Pick<IApiClient, 'llm'>, describe, stubSchema)
+    expect(result.drafts[0]?.compatPresent).toBe(false)
+    expect(result.drafts[0]?.compat).toEqual({})
+    expect(result.drafts[0]?.models[0]?.id).toBe('user')
+  })
+})
+

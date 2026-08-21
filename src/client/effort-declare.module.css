@@ -108,8 +108,7 @@
 }
 
 .primaryButton,
-.secondaryButton,
-.dangerButton {
+.secondaryButton {
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
@@ -143,19 +142,8 @@
   background: var(--dsw-alias-interactive-bg-hover-solid);
 }
 
-.dangerButton {
-  border: none;
-  background: transparent;
-  color: var(--dsw-alias-state-error-primary);
-}
-
-.dangerButton:hover:not(:disabled) {
-  background: var(--dsw-alias-interactive-bg-hover-danger);
-}
-
 .primaryButton:disabled,
 .secondaryButton:disabled,
-.dangerButton:disabled,
 .linkButton:disabled,
 .input:disabled {
   opacity: 0.4;
@@ -164,7 +152,6 @@
 
 .primaryButton:focus-visible,
 .secondaryButton:focus-visible,
-.dangerButton:focus-visible,
 .linkButton:focus-visible,
 .input:focus-visible {
   outline: none;

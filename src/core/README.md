@@ -16,10 +16,11 @@
 | 文件 | 说明 |
 | --- | --- |
 | [`catalog.ts`](./catalog.ts) | 规范档位顺序、`thinkingFormat` 回退列表、`llm-pi-ai` / DeepSeek 相关常量。 |
-| [`efforts.ts`](./efforts.ts) | `reasoningEfforts` 读写、Off 三态、校验（空对象 / 只开 Off 返回错误码，不抛异常）。 |
-| [`presets.ts`](./presets.ts) | DeepSeek、OpenAI、仅开/关三套预设；spread 到已有模型行与路由 `compat`。 |
-| [`path-ops.ts`](./path-ops.ts) | 与官方模型页相同的一层键 diff；`buildSaveOps` 只提交该路由的 `models` 整表和有差异的 `compat` 键。 |
-| [`paths.ts`](./paths.ts) | 嵌套读取、对象与模型表的 clone。 |
+| [`efforts.ts`](./efforts.ts) | `reasoningEfforts` 读写、Off 三态、校验（空对象 / 只开 Off / 未知键返回错误码，不抛异常）。 |
+| [`presets.ts`](./presets.ts) | DeepSeek、OpenAI、仅开/关三套预设；每套对三个方言键都表态；spread 到已有模型行与路由 `compat`。 |
+| [`path-ops.ts`](./path-ops.ts) | 与官方模型页相同的一层键 diff；`buildSaveOps` 使用 `settingsPath`，只提交该路由的 `models` 整表和有差异的 `compat` 键。 |
+| [`drafts.ts`](./drafts.ts) | 用户层草稿、dirty 与 pathOps 一致、保存后 revision、脏卡合并、generation。 |
+| [`paths.ts`](./paths.ts) | 嵌套读取、对象与模型表的 clone（非对象行跳过）。 |
 | [`filter.ts`](./filter.ts) | 哪些路由可编辑：手工 `llm-pi-ai` + openai-completions；排除 catalog 与官方 DeepSeek。 |
 | [`validate.ts`](./validate.ts) | 对单行 `reasoningEfforts` 调用校验。 |
 

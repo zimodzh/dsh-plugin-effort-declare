@@ -11,6 +11,6 @@ export declare function hasPath(value: unknown, path: readonly string[]): boolea
 export declare function isPlainObject(value: unknown): value is Record<string, unknown>;
 /** Structured clone of a JSON object, or `{}` when the source is not one. */
 export declare function cloneObject(value: unknown): Record<string, unknown>;
-/** Structured clone of a models array; non-arrays become `[]`. */
+/** Structured clone of a models array; non-arrays and non-object rows are skipped. */
 export declare function cloneModels(value: unknown): Record<string, unknown>[];
 //# sourceMappingURL=paths.d.ts.map

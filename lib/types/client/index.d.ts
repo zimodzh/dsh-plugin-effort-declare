@@ -1,7 +1,6 @@
 /**
  * dsh-plugin-effort-declare — browser half: settings.section for per-model
- * reasoning effort declarations. Wiring failures are logged, never thrown —
- * a throwing apply takes down the whole web shell.
+ * reasoning effort declarations.
  */
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client';
 import { type EffortDeclareKey } from './locales.ts';

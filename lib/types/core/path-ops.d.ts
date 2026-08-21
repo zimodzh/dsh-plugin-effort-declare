@@ -18,13 +18,13 @@ export type PathOp = {
  */
 export declare function pathOps(base: readonly string[], before: unknown, after: Record<string, unknown>): PathOp[];
 export interface SaveSlices {
-    /** Provider route id (settings path `providers.<route>`). */
-    route: string;
-    /** Models array before the edit (effective / stored). */
+    /** Profile path from `llm.providers[].settingsPath` (not a hardcoded route id). */
+    settingsPath: readonly string[];
+    /** Models array before the edit (user layer). */
     beforeModels: unknown;
     /** Models array after the edit — every existing row, spread intact. */
     afterModels: unknown[];
-    /** Route-level compat before the edit (`undefined` = field absent). */
+    /** Route-level compat before the edit (`undefined` = field absent on user). */
     beforeCompat: unknown;
     /**
      * Route-level compat after the edit. `undefined` means leave the field

@@ -95,15 +95,8 @@ const clientConfig: UserConfig = {
         classMap[local] = exp.name
       }
       return [
-        `const css = ${JSON.stringify(code.toString())};`,
-        `const tagId = ${JSON.stringify(`${ID}/${basename(fileId)}`)};`,
-        'if (typeof document !== \'undefined\' && document.querySelector(\'style[data-plugin-css=\' + JSON.stringify(tagId) + \']\') === null) {',
-        '  const tag = document.createElement(\'style\');',
-        `  tag.dataset.plugin = ${JSON.stringify(ID)};`,
-        '  tag.dataset.pluginCss = tagId;',
-        '  tag.textContent = css;',
-        '  document.head.appendChild(tag);',
-        '}',
+        `export const cssText = ${JSON.stringify(code.toString())};`,
+        `export const cssTagId = ${JSON.stringify(`${ID}/${basename(fileId)}`)};`,
         `export default ${JSON.stringify(classMap)};`,
       ].join('\n')
     },

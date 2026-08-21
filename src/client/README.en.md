@@ -9,7 +9,7 @@
 
 Browser half: registers **Reasoning efforts** in the Web UI settings panel and writes `llm-pi-ai` through the official settings RPC.
 
-Wiring failures in `apply` are logged and never thrown. A throwing plugin `apply` in the web shell takes down the whole front end.
+Wiring failures in `apply` throw, same as the official Models page. Do not swallow `apply` with a blanket `try/catch`. Locale, CSS, and event subscriptions are cleaned up through `ctx.effect` on unload.
 
 Cross-plugin work uses Cordis services only (`connection`, `settingsScope`, `settingsSchema`, `slots`, `locale`, `remote`). Do not value-import `@deepseek-ai/dsh-client-ui-settings-models`: the client bundle purity rule forbids inlining other `@deepseek-ai/*` packages except platform modules in the shell’s frozen table.
 
@@ -17,8 +17,9 @@ Cross-plugin work uses Cordis services only (`connection`, `settingsScope`, `set
 
 | File | Role |
 | --- | --- |
-| [`index.ts`](./index.ts) | Registers zh/en copy and `settings.section` (id `effort-declare`, order 15); refreshes on settings, adapter, and connection-reset events. |
+| [`index.ts`](./index.ts) | Registers zh/en copy, CSS (`ctx.effect` insert/remove), and `settings.section` (id `effort-declare`, order 15). Subscribes in `apply` to `settings/document-updated` (`llm-pi-ai` only), `llm/adapters-updated`, and `connection/reset`. |
 | [`EffortDeclareSection.tsx`](./EffortDeclareSection.tsx) | Route cards, presets, Off tri-state, advanced protocol switches, save and cancel. |
+| [`load-drafts.ts`](./load-drafts.ts) | Builds drafts from `llm.providers` + the settings mirror; drafts come from `user`, protocol classification may use `value`. |
 | [`locales.ts`](./locales.ts) | Copy namespace `plugin-effort-declare`. |
 | [`effort-declare.module.css`](./effort-declare.module.css) | `--dsw-alias-*` tokens only, so dark theme stays correct. |
 | [`schema-ops.ts`](./schema-ops.ts) | Binds `settingsSchema` as plain callbacks so the service identity is not passed into React. |

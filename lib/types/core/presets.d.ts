@@ -2,13 +2,13 @@ import type { ReasoningEfforts } from './efforts.ts';
 export type PresetId = 'deepseek' | 'openai' | 'toggle';
 export interface PresetCompatPatch {
     /**
-     * `set` writes the key; `unset` removes it (OpenAI default thinkingFormat);
-     * omitted keys are left untouched on the existing compat object.
+     * Every preset states all three UI dialect keys. `set` writes the key;
+     * `unset` removes it. Unknown extra compat keys are left in place.
      */
-    thinkingFormat?: 'set' | 'unset';
+    thinkingFormat: 'set' | 'unset';
     thinkingFormatValue?: string;
-    supportsDeveloperRole?: 'set-false' | 'unset';
-    supportsReasoningEffort?: 'set-false' | 'unset';
+    supportsDeveloperRole: 'set-false' | 'unset';
+    supportsReasoningEffort: 'set-false' | 'unset';
 }
 export interface EffortPreset {
     id: PresetId;

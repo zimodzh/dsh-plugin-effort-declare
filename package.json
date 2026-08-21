@@ -41,8 +41,10 @@
     "typecheck": "tsc -b --pretty false"
   },
   "peerDependencies": {
+    "@deepseek-ai/dsh-api-remotes": "^0.1.0-rc.8",
     "@deepseek-ai/dsh-client-locale": "^0.1.0-rc.8",
     "@deepseek-ai/dsh-client-runtime": "^0.1.0-rc.8",
+    "@deepseek-ai/dsh-client-ui-settings": "^0.1.0-rc.8",
     "react": "^18.2.0"
   },
   "devDependencies": {
@@ -68,6 +70,7 @@
     "src",
     "cordis.patch.yml",
     "README.md",
-    "README.en.md"
+    "README.en.md",
+    "LICENSE"
   ]
 }

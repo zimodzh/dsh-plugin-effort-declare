@@ -2,16 +2,20 @@
  * Settings section: per-model reasoningEfforts + openai-completions compat
  * for hand-declared llm-pi-ai routes.
  */
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import type { IApiClient, SettingsNamespaceView } from '@deepseek-ai/dsh-api-remotes/client'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import type { IApiClient } from '@deepseek-ai/dsh-api-remotes/client'
 import type { SettingsDescribeFace } from '@deepseek-ai/dsh-client-ui-settings/client'
+import { LLM_PI_AI_NS, THINKING_LEVELS_WITHOUT_OFF } from '../core/catalog.ts'
 import {
-  FALLBACK_THINKING_FORMATS,
-  LLM_PI_AI_NS,
-  SCHEMA_PROBE_ROUTE,
-  THINKING_LEVELS_WITHOUT_OFF,
-} from '../core/catalog.ts'
-import { classifyRoute, profileAt, unionStringChoices } from '../core/filter.ts'
+  alignDraft,
+  applySaveSuccess,
+  draftDirty,
+  generationIsCurrent,
+  mergeLoadedDrafts,
+  nextGeneration,
+  thinkingFormatChoices,
+  type RouteDraft,
+} from '../core/drafts.ts'
 import {
   hasLevel,
   readEfforts,
@@ -24,18 +28,21 @@ import {
 } from '../core/efforts.ts'
 import { applyPresetCompat, applyPresetEfforts, PRESETS, type PresetId } from '../core/presets.ts'
 import { buildSaveOps } from '../core/path-ops.ts'
-import { cloneModels, cloneObject, isPlainObject } from '../core/paths.ts'
+import { cloneModels, cloneObject } from '../core/paths.ts'
 import { modelEffortError } from '../core/validate.ts'
+import { loadDrafts } from './load-drafts.ts'
 import type { SchemaOps } from './schema-ops.ts'
 import type { EffortDeclareKey } from './locales.ts'
 import css from './effort-declare.module.css'
+
+export type InvalidationSource = 'settings' | 'directory'
 
 export interface EffortDeclareSectionInjected {
   api: Pick<IApiClient, 'settings' | 'llm'>
   describe: SettingsDescribeFace
   schema: SchemaOps
   t: (key: EffortDeclareKey) => string
-  onInvalidate: (listener: () => void) => () => void
+  subscribeInvalidate: (listener: (source: InvalidationSource) => void) => () => void
 }
 
 export interface EffortDeclareSectionProps extends Partial<EffortDeclareSectionInjected> {
@@ -43,21 +50,9 @@ export interface EffortDeclareSectionProps extends Partial<EffortDeclareSectionI
   close: () => void
 }
 
-interface RouteDraft {
-  provider: string
-  displayName: string
-  revision: number
-  models: Record<string, unknown>[]
-  originalModels: Record<string, unknown>[]
-  compat: Record<string, unknown>
-  originalCompat: Record<string, unknown>
-  compatPresent: boolean
-}
+export { loadDrafts } from './load-drafts.ts'
 
-function schemaDefaultString(node: unknown): string | undefined {
-  if (!isPlainObject(node) || !isPlainObject(node.meta)) return undefined
-  return typeof node.meta.default === 'string' ? node.meta.default : undefined
-}
+type CardNotice = { kind: 'saved' | 'conflict' | 'error'; text: string }
 
 function compatSummary(compat: Record<string, unknown>): string {
   const parts: string[] = []
@@ -67,11 +62,6 @@ function compatSummary(compat: Record<string, unknown>): string {
   return parts.join(' · ')
 }
 
-function dirty(draft: RouteDraft): boolean {
-  return JSON.stringify(draft.models) !== JSON.stringify(draft.originalModels)
-    || JSON.stringify(draft.compat) !== JSON.stringify(draft.originalCompat)
-}
-
 function errorText(code: ReturnType<typeof modelEffortError>, t: (key: EffortDeclareKey) => string): string | undefined {
   if (code === 'empty') return t('errorEmpty')
   if (code === 'off-only') return t('errorOffOnly')
@@ -79,75 +69,17 @@ function errorText(code: ReturnType<typeof modelEffortError>, t: (key: EffortDec
   return undefined
 }
 
-/**
- * Load editable route drafts from llm.providers + the llm-pi-ai namespace.
- */
-export async function loadDrafts(
-  api: Pick<IApiClient, 'llm'>,
-  describe: SettingsDescribeFace,
-  schema: SchemaOps,
-): Promise<{ writable: boolean; formats: string[]; drafts: RouteDraft[]; error?: string }> {
-  await describe.ensure()
-  const mirrored = describe.getSnapshot()
-  if (mirrored.view === undefined) {
-    return { writable: false, formats: [...FALLBACK_THINKING_FORMATS], drafts: [], error: mirrored.error ?? undefined }
-  }
-  const providersResponse = await api.llm.providers({})
-  if (!providersResponse.result.ok) {
-    return {
-      writable: mirrored.view.writable,
-      formats: [...FALLBACK_THINKING_FORMATS],
-      drafts: [],
-      error: providersResponse.result.error.message,
-    }
-  }
-  const namespaces = new Map(mirrored.view.namespaces.map((view: SettingsNamespaceView) => [view.ns, view]))
-  const pi = namespaces.get(LLM_PI_AI_NS)
-  let formats: string[] = [...FALLBACK_THINKING_FORMATS]
-  let schemaDefaultApi: string | undefined
-  if (pi !== undefined) {
-    try {
-      const root = schema.rehydrate(pi.schema)
-      const formatNode = schema.nodeAtPath(root, ['providers', SCHEMA_PROBE_ROUTE, 'compat', 'thinkingFormat'])
-      const fromSchema = unionStringChoices(formatNode)
-      if (fromSchema.length > 0) formats = fromSchema
-      schemaDefaultApi = schemaDefaultString(schema.nodeAtPath(root, ['providers', SCHEMA_PROBE_ROUTE, 'api']))
-    } catch {
-      // Live schema walk is best-effort; fallback list is test-pinned.
-    }
-  }
-  const drafts: RouteDraft[] = []
-  for (const entry of providersResponse.result.value.providers) {
-    const profile = profileAt(pi?.value, entry.settingsPath, entry.provider)
-    if (!classifyRoute(entry, profile, schemaDefaultApi).editable) continue
-    const models = cloneModels(isPlainObject(profile) ? profile.models : [])
-    const compatPresent = isPlainObject(profile) && isPlainObject(profile.compat)
-    const compat = cloneObject(isPlainObject(profile) ? profile.compat : {})
-    drafts.push({
-      provider: entry.provider,
-      displayName: entry.displayName,
-      revision: pi?.revision ?? 0,
-      models,
-      originalModels: cloneModels(models),
-      compat,
-      originalCompat: cloneObject(compat),
-      compatPresent,
-    })
-  }
-  return { writable: mirrored.view.writable, formats, drafts }
-}
-
 function ModelRowEditor(props: {
   row: Record<string, unknown>
   index: number
+  radioName: string
   disabled: boolean
   t: (key: EffortDeclareKey) => string
   onChange: (row: Record<string, unknown>) => void
 }): ReactNode {
-  const { row, index, disabled, t, onChange } = props
+  const { row, disabled, t, onChange } = props
   const efforts = readEfforts(row) ?? {}
   const off = readOff(readEfforts(row))
-  const err = errorText(modelEffortError(row), t)
   const id = typeof row.id === 'string' ? row.id : ''
   const name = typeof row.name === 'string' ? row.name : ''
 
@@ -205,7 +137,7 @@ function ModelRowEditor(props: {
           <label key={mode} className={css.level}>
             <input
               type="radio"
-              name={`off-${id}-${String(index)}`}
+              name={props.radioName}
               checked={off.mode === mode}
               disabled={disabled}
               onChange={() => { patchEfforts(writeOff(efforts, mode, off.value)) }}
@@ -226,7 +158,6 @@ function ModelRowEditor(props: {
           )
           : null}
       </div>
-      {err !== undefined ? <p className={css.error}>{err}</p> : null}
     </div>
   )
 }
@@ -236,18 +167,24 @@ function RouteCard(props: {
   formats: readonly string[]
   writable: boolean
   busy: boolean
+  reloading: boolean
+  notice: CardNotice | undefined
   t: (key: EffortDeclareKey) => string
   onChange: (draft: RouteDraft) => void
   onSave: (draft: RouteDraft) => void
   onCancel: (draft: RouteDraft) => void
 }): ReactNode {
-  const { draft, formats, writable, busy, t, onChange } = props
-  const disabled = !writable || busy
+  const { draft, writable, busy, reloading, t, onChange } = props
+  const noModels = draft.models.length === 0
+  const editDisabled = !writable || busy || noModels
+  const saveLocked = editDisabled || reloading
+  const formats = thinkingFormatChoices(props.formats, draft.compat.thinkingFormat)
   const summary = compatSummary(draft.compat)
   const sameWire = draft.compat.supportsReasoningEffort === false
   const clientError = draft.models
     .map(row => errorText(modelEffortError(row), t))
     .find(text => text !== undefined)
+  const dirty = draftDirty(draft)
 
   const applyPreset = (id: PresetId): void => {
     const preset = PRESETS[id]
@@ -270,24 +207,25 @@ function RouteCard(props: {
       </p>
       <div className={css.presetRow}>
         <span className={css.fieldLabel}>{t('presets')}</span>
-        <button type="button" className={css.secondaryButton} disabled={disabled} onClick={() => { applyPreset('deepseek') }}>
+        <button type="button" className={css.secondaryButton} disabled={editDisabled} onClick={() => { applyPreset('deepseek') }}>
           {t('presetDeepSeek')}
         </button>
-        <button type="button" className={css.secondaryButton} disabled={disabled} onClick={() => { applyPreset('openai') }}>
+        <button type="button" className={css.secondaryButton} disabled={editDisabled} onClick={() => { applyPreset('openai') }}>
           {t('presetOpenAI')}
         </button>
-        <button type="button" className={css.secondaryButton} disabled={disabled} onClick={() => { applyPreset('toggle') }}>
+        <button type="button" className={css.secondaryButton} disabled={editDisabled} onClick={() => { applyPreset('toggle') }}>
           {t('presetToggle')}
         </button>
       </div>
       {sameWire ? <p className={css.notice}>{t('presetToggleWarn')}</p> : null}
-      {draft.models.length === 0 ? <p className={css.notice}>{t('noModels')}</p> : null}
+      {noModels ? <p className={css.notice}>{t('noModels')}</p> : null}
       {draft.models.map((row, index) => (
         <ModelRowEditor
           key={`${String(row.id)}-${String(index)}`}
           row={row}
           index={index}
-          disabled={disabled}
+          radioName={`off-${draft.provider}-${String(index)}`}
+          disabled={editDisabled}
           t={t}
           onChange={(next) => {
             const models = draft.models.map((candidate, at) => at === index ? next : candidate)
@@ -303,7 +241,7 @@ function RouteCard(props: {
             <select
               className={`${css.input} ${css.selectInput}`}
               value={typeof draft.compat.thinkingFormat === 'string' ? draft.compat.thinkingFormat : ''}
-              disabled={disabled}
+              disabled={editDisabled}
               onChange={(event) => {
                 const compat = { ...draft.compat }
                 if (event.target.value === '') delete compat.thinkingFormat
@@ -315,11 +253,14 @@ function RouteCard(props: {
               {formats.map(format => <option key={format} value={format}>{format}</option>)}
             </select>
           </label>
+          {draft.compat.supportsDeveloperRole === true
+            ? <p className={css.notice}>{t('developerTrueHint')}</p>
+            : null}
           <label className={css.check}>
             <input
               type="checkbox"
               checked={draft.compat.supportsDeveloperRole === false}
-              disabled={disabled}
+              disabled={editDisabled}
               onChange={(event) => {
                 const compat = { ...draft.compat }
                 if (event.target.checked) compat.supportsDeveloperRole = false
@@ -333,7 +274,7 @@ function RouteCard(props: {
             <input
               type="checkbox"
               checked={draft.compat.supportsReasoningEffort === false}
-              disabled={disabled}
+              disabled={editDisabled}
               onChange={(event) => {
                 const compat = { ...draft.compat }
                 if (event.target.checked) compat.supportsReasoningEffort = false
@@ -346,11 +287,15 @@ function RouteCard(props: {
         </div>
       </details>
       {clientError !== undefined ? <p className={css.error}>{clientError}</p> : null}
+      {props.notice?.kind === 'saved' ? <p className={css.savedNotice}>{props.notice.text}</p> : null}
+      {props.notice?.kind === 'conflict' || props.notice?.kind === 'error'
+        ? <p className={css.error}>{props.notice.text}</p>
+        : null}
       <div className={css.actions}>
         <button
           type="button"
           className={css.secondaryButton}
-          disabled={busy || !dirty(draft)}
+          disabled={busy || !dirty}
           onClick={() => { props.onCancel(draft) }}
         >
           {t('cancel')}
@@ -358,7 +303,7 @@ function RouteCard(props: {
         <button
           type="button"
           className={css.primaryButton}
-          disabled={disabled || !dirty(draft) || draft.models.length === 0 || clientError !== undefined}
+          disabled={saveLocked || !dirty || clientError !== undefined}
           onClick={() => { props.onSave(draft) }}
         >
           {busy ? t('saving') : t('save')}
@@ -375,65 +320,77 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
   const schema = props.schema
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
   const [writable, setWritable] = useState(false)
-  const [formats, setFormats] = useState<string[]>([...FALLBACK_THINKING_FORMATS])
+  const [formats, setFormats] = useState<string[]>([])
   const [drafts, setDrafts] = useState<RouteDraft[]>([])
   const [busyRoute, setBusyRoute] = useState<string | null>(null)
+  const [notices, setNotices] = useState<Record<string, CardNotice>>({})
+  const generationRef = useRef(0)
+  const draftsRef = useRef(drafts)
+  draftsRef.current = drafts
 
-  const reload = useCallback((): void => {
+  const reload = useCallback((preserveDirty: boolean): void => {
     if (api === undefined || describe === undefined || schema === undefined) {
       setStatus('error')
       setError(t('loadError'))
       return
     }
+    const generation = nextGeneration(generationRef)
     setStatus('loading')
     setError('')
     void loadDrafts(api, describe, schema).then((result) => {
+      if (!generationIsCurrent(generationRef, generation)) return
       setWritable(result.writable)
-      setFormats(result.formats)
-      setDrafts(result.drafts)
+      if (result.formats.length > 0) setFormats(result.formats)
       if (result.error !== undefined) {
         setStatus('error')
         setError(result.error)
         return
       }
+      const merged = mergeLoadedDrafts(draftsRef.current, result.drafts, { preserveDirty })
+      setDrafts(merged.drafts)
+      if (merged.conflicted.length > 0) {
+        setNotices(Object.fromEntries(
+          merged.conflicted.map(provider => [provider, { kind: 'conflict' as const, text: t('dirtyConflict') }]),
+        ))
+      }
       setStatus('ready')
     }, (failure: unknown) => {
+      if (!generationIsCurrent(generationRef, generation)) return
       setStatus('error')
       setError(failure instanceof Error ? failure.message : t('loadError'))
     })
   }, [api, describe, schema, t])
 
-  useEffect(() => { reload() }, [reload])
+  useEffect(() => { reload(false) }, [reload])
 
   useEffect(() => {
-    if (props.onInvalidate === undefined) return undefined
-    return props.onInvalidate(() => { reload() })
-  }, [props.onInvalidate, reload])
+    if (props.subscribeInvalidate === undefined) return undefined
+    return props.subscribeInvalidate(() => { reload(true) })
+  }, [props.subscribeInvalidate, reload])
 
   const save = async (draft: RouteDraft): Promise<void> => {
-    if (api === undefined) return
+    if (api === undefined || describe === undefined) return
+    if (status === 'loading' || busyRoute !== null) return
     const blocking = draft.models
       .map(row => errorText(modelEffortError(row), t))
       .find(text => text !== undefined)
     if (blocking !== undefined) {
-      setError(blocking)
+      setNotices({ [draft.provider]: { kind: 'error', text: blocking } })
       return
     }
     setBusyRoute(draft.provider)
-    setError('')
-    setNotice('')
+    setNotices({})
     try {
       const ops = buildSaveOps({
-        route: draft.provider,
+        settingsPath: draft.settingsPath,
         beforeModels: draft.originalModels,
         afterModels: draft.models,
         beforeCompat: draft.compatPresent ? draft.originalCompat : undefined,
         afterCompat: draft.compat,
       })
       if (ops.length === 0) {
-        setBusyRoute(null)
+        setDrafts(current => current.map(row => row.provider === draft.provider ? alignDraft(row) : row))
         return
       }
       const response = await api.settings.mutate({
@@ -442,52 +399,85 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
         expectedRevision: draft.revision,
       })
       if (!response.result.ok) {
-        setError(response.result.error.code === 'settings-conflict' ? t('conflict') : response.result.error.message)
+        setNotices({
+          [draft.provider]: {
+            kind: 'error',
+            text: response.result.error.code === 'settings-conflict' ? t('conflict') : response.result.error.message,
+          },
+        })
         return
       }
-      setNotice(t('saved'))
-      reload()
+      const view = response.result.value
+      describe.acceptView(view)
+      setDrafts(current => applySaveSuccess(current, draft.provider, {
+        user: view.user ?? {},
+        revision: view.revision,
+      }))
+      setNotices({ [draft.provider]: { kind: 'saved', text: t('saved') } })
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : t('loadError'))
+      setNotices({
+        [draft.provider]: {
+          kind: 'error',
+          text: failure instanceof Error ? failure.message : t('loadError'),
+        },
+      })
     } finally {
       setBusyRoute(null)
     }
   }
+
+  const showLoading = status === 'loading' && drafts.length === 0
+  const showEmpty = status === 'ready' && drafts.length === 0
+  const showList = drafts.length > 0
 
   return (
     <div className={css.section}>
       <h2 className={css.title}>{t('title')}</h2>
       <p className={css.intro}>{t('intro')}</p>
       {!writable && status === 'ready' ? <p className={css.notice}>{t('readOnly')}</p> : null}
-      {error !== '' ? <p className={css.error}>{error}</p> : null}
-      {notice !== '' ? <p className={css.savedNotice}>{notice}</p> : null}
+      {showLoading ? <p className={css.intro}>{t('loading')}</p> : null}
+      {status === 'error' ? <p className={css.error}>{error}</p> : null}
       {status === 'error'
         ? (
-          <button type="button" className={css.secondaryButton} onClick={reload}>{t('reload')}</button>
+          <button type="button" className={css.secondaryButton} onClick={() => { reload(true) }}>{t('reload')}</button>
         )
         : null}
-      {status === 'ready' && drafts.length === 0
+      {showEmpty
         ? (
           <>
             <p className={css.notice}>{t('empty')}</p>
             <p className={css.intro}>{t('emptyHint')}</p>
           </>
         )
-        : (
+        : null}
+      {showList
+        ? (
           <ul className={css.rows}>
             {drafts.map(draft => (
               <RouteCard
                 key={draft.provider}
                 draft={draft}
-                formats={formats}
+                formats={formats.length > 0 ? formats : []}
                 writable={writable}
                 busy={busyRoute === draft.provider}
+                reloading={status === 'loading'}
+                notice={notices[draft.provider]}
                 t={t}
                 onChange={(next) => {
+                  setNotices(current => {
+                    const copy = { ...current }
+                    delete copy[next.provider]
+                    return copy
+                  })
                   setDrafts(current => current.map(row => row.provider === next.provider ? next : row))
                 }}
                 onSave={(next) => { void save(next) }}
                 onCancel={(next) => {
+                  setNotices(current => {
+                    const copy = { ...current }
+                    delete copy[next.provider]
+                    return copy
+                  })
                   setDrafts(current => current.map(row => row.provider === next.provider
                     ? {
                         ...row,
@@ -499,7 +489,8 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
               />
             ))}
           </ul>
-        )}
+        )
+        : null}
     </div>
   )
 }

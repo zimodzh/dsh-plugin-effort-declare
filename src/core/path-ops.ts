@@ -33,13 +33,13 @@ export function pathOps(
 }
 
 export interface SaveSlices {
-  /** Provider route id (settings path `providers.<route>`). */
-  route: string
-  /** Models array before the edit (effective / stored). */
+  /** Profile path from `llm.providers[].settingsPath` (not a hardcoded route id). */
+  settingsPath: readonly string[]
+  /** Models array before the edit (user layer). */
   beforeModels: unknown
   /** Models array after the edit — every existing row, spread intact. */
   afterModels: unknown[]
-  /** Route-level compat before the edit (`undefined` = field absent). */
+  /** Route-level compat before the edit (`undefined` = field absent on user). */
   beforeCompat: unknown
   /**
    * Route-level compat after the edit. `undefined` means leave the field
@@ -53,7 +53,7 @@ export interface SaveSlices {
  * plus one-level compat path ops. Never replace the `llm-pi-ai` section.
  */
 export function buildSaveOps(slices: SaveSlices): PathOp[] {
-  const base = ['providers', slices.route]
+  const base = [...slices.settingsPath]
   const ops: PathOp[] = []
   if (JSON.stringify(slices.beforeModels) !== JSON.stringify(slices.afterModels)) {
     ops.push({ op: 'set', path: [...base, 'models'], value: slices.afterModels })

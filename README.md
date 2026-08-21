@@ -11,7 +11,7 @@
 
 DSH 只有在模型向选择器公布了推理能力时才会显示该行。官方 catalog 模型自带声明；自配置的第三方供应商的手工 `llm-pi-ai` 路由通常只有 `id`、显示名和容量，Effort 行因此消失。本插件在设置中增加「推理档位」页，按模型写入官方字段 `reasoningEfforts`，必要时一并写 openai-completions 的 `compat`（例如 `thinkingFormat`）。对话选择器和请求编码仍走 DSH 原有路径：不拦截 `llm/stream`，也不替换官方「模型」页。
 
-> **注意：** 本技能为社区维护项目，与 DeepSeek 官方无隶属关系，亦未获官方背书。
+> **注意：** 本插件为社区维护项目，与 DeepSeek 官方无隶属关系，亦未获官方背书。
 
 ## 做什么
 
@@ -19,10 +19,10 @@ DSH 只有在模型向选择器公布了推理能力时才会显示该行。官�
 - 只编辑手工声明、且协议为 `openai-completions` 的 `llm-pi-ai` 路由（未写 `api` 时先读 schema 默认，再按 completions 处理）。
 - 每个模型可多选规范档（`minimal` … `max`），并为每档填写发给网关的拼写（默认与键相同）。
 - Off 分为三态，互不合并：无 Off；提供 Off 且不发参数；提供 Off 且发送 `none` 或自定义字符串。
-- 三套可改草稿的预设：
-  - **DeepSeek 兼容**：`off` 空值 + `low` / `high` / `max` 原样；路由 `thinkingFormat: deepseek`、`supportsDeveloperRole: false`。
-  - **OpenAI 兼容**：`minimal` / `low` / `medium` / `high`；不写 `thinkingFormat`（默认 openai）；不强行关闭 developer 角色。
-  - **仅开/关**：`off` + `high`，并设置 `supportsReasoningEffort: false`。界面会提示：选择器里多档在线上没有区别。
+- 三套可改草稿的预设（点预设 = 换成这套方言，不是叠加上一套；未知的其它 `compat` 键会保留）：
+  - **DeepSeek 兼容**：`off` 空值 + `low` / `high` / `max` 原样；`thinkingFormat: deepseek`、`supportsDeveloperRole: false`，并 **unset** `supportsReasoningEffort`。
+  - **OpenAI 兼容**：`minimal` / `low` / `medium` / `high`；**unset** `thinkingFormat`、`supportsDeveloperRole`、`supportsReasoningEffort`（默认 openai 方言）。
+  - **仅开/关**：`off` + `high`，**unset** `thinkingFormat` 与 `supportsDeveloperRole`，并设置 `supportsReasoningEffort: false`。界面会提示：选择器里多档在线上没有区别。
 - 保存使用官方 `settings.mutate` 嵌套 path ops：对该路由的 `models` 做整表替换并保留未编辑字段；`compat` 只提交有差异的键。
 - 「清除本模型声明」会 unset `reasoningEfforts`（字段缺席 = 默认关闭），而不是写入 `false`。
 
@@ -44,7 +44,7 @@ DSH 只有在模型向选择器公布了推理能力时才会显示该行。官�
 | 核心逻辑 | 档位编解码、Off 三态、三套预设、路由过滤、与官方模型页同形的 path ops |
 | 组合包 | `package.json` 的 `dsh.bundle` + `cordis.patch.yml`，可供 `dsh plugin add` 安装 |
 | 浏览器包 | `dsh.client` 指向 `lib/client.js`，由 Web UI 加载 |
-| 测试 | 仓库内 Vitest：预设、保存语义、清除声明、校验失败不抛、列表过滤 |
+| 测试 | 仓库内 Vitest：预设方言三键、user 层草稿、保存 revision、脏卡合并、校验、列表过滤 |
 | 类型与产物 | `pnpm build` 生成的 `lib/`（host ESM、client CJS、`.d.ts`） |
 
 协议转换由 `@earendil-works/pi-ai` 与 `@deepseek-ai/dsh-llm-pi-ai` 完成。本插件只写配置。
@@ -81,31 +81,33 @@ dsh-plugin-effort-declare/
 
 ## 安装
 
-本插件在 DeepSeek Harness **0.1.0-rc.8** 上制作。安装时请使用 **大于等于 0.1.0-rc.8** 的 DSH；低于该版本未经测试，不保证可用。还需要一个可启动的 profile。
+本插件在 DeepSeek Harness **0.1.0-rc.8** 上制作，并在 **0.1.1-rc.1** 上手测通过。请使用 **≥ 0.1.0-rc.8** 的 DSH，以及一个可启动的 profile（常见是 `web`）。低于 rc.8 未经测试。
 
-**从本地目录：**
+`dsh plugin` 写入的是 **当前 `$DSH_HOME`** 里的 profile。未设置时默认 `~/.dsh`。DeepSeek Harness Desktop 等部署的 home 往往不是这条默认路径：必须先导出 `DSH_HOME`（PowerShell：`$env:DSH_HOME`）再跑下面的命令，否则会装进另一份 home。
 
-```bash
-dsh plugin --profile <profile> add /path/to/dsh-plugin-effort-declare
-dsh --profile <profile> --dump-config   # 应出现 dsh-plugin-effort-declare 层
-```
-
-**从 GitHub**（把 `OWNER` 换成实际上游）：
+**从本地目录（推荐）：** 需要已有 `lib/`（本仓库提交了构建产物）。Windows 用 `file:` 加正斜杠绝对路径更稳：
 
 ```bash
-dsh plugin --profile <profile> add github:OWNER/dsh-plugin-effort-declare
+dsh plugin --profile web add file:/absolute/path/to/dsh-plugin-effort-declare
+dsh --profile web --dump-config   # 应出现 # == dsh-plugin-effort-declare
 ```
 
-若 pnpm 拒绝运行 git 依赖的 `prepare`（`tsdown`），把包名写入该 profile 的 `pnpm-workspace.yaml` 的 `allowBuilds` 后再 `add` 一次。本仓库提交了 `lib/`，安装已构建的 checkout 或 `pnpm pack` 的 tarball 可跳过构建授权。
+装完后重启正在跑这个 profile 的 DSH（Desktop 则重启其后端）。打开 **设置 → 推理档位**。先在「模型」页添加手工 `llm-pi-ai` 提供方，本页才会列出可编辑路由。
 
-启动 DSH 后打开 **设置 → 推理档位**。先在「模型」页添加手工 `llm-pi-ai` 提供方，本页才会列出可编辑路由。
+**从 GitHub：** 本插件尚未发布到固定上游。有仓库后再：
+
+```bash
+dsh plugin --profile web add github:OWNER/dsh-plugin-effort-declare
+```
+
+git 安装会跑 `prepare`（`tsdown`）。若 pnpm 拒绝，把包名写入该 profile 的 `pnpm-workspace.yaml` 的 `allowBuilds` 后再 `add` 一次。已构建的 checkout 或 `pnpm pack` 的 tarball 可跳过构建授权。
 
 ## 使用
 
 1. 打开对应路由的卡片，或点预设写入草稿。
 2. 按模型勾选档位；需要时改线上拼写，并单独设置 Off 三态。
-3. 高级区（默认折叠）可改 `thinkingFormat`、`supportsDeveloperRole`、`supportsReasoningEffort`。
-4. 保存。校验失败（例如只开了 Off、或空的 `reasoningEfforts`）会显示在面板上，不会让客户端崩溃；官方 schema 拒绝时同样展示 Host 返回的错误。
+3. 高级区（默认折叠）可改 `thinkingFormat`、`supportsDeveloperRole`、`supportsReasoningEffort`。v1 勾选框只能把 `supportsDeveloperRole` 写成 `false` 或缺席；文档里若已是 `true`，页面会提示，未勾选时不会因为展示逻辑去写 `false`。
+4. 保存。校验失败（例如只开了 Off、或空的 `reasoningEfforts`）会显示在对应路由卡片上，不会让客户端崩溃；官方 schema 拒绝时同样展示 Host 返回的错误。`apply` 接线失败会抛出，设置里不应出现「静默没有这一页」。
 
 只读部署下提交按钮不可用。
 
