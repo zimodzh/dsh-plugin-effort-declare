@@ -1,0 +1,5 @@
+# Inserts the dual-face plugin row. Host apply is empty in v1; the browser
+# half (package.json dsh.client) registers the settings.section.
+- insert:
+    - id: dsh-plugin-effort-declare
+      name: 'dsh-plugin-effort-declare'
