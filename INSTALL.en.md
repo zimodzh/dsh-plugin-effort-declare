@@ -9,14 +9,18 @@
 
 Back to the [README](./README.en.md). Requires DeepSeek Harness **0.1.0-rc.8 or newer**. Do not use `npm install`; use `dsh plugin` below.
 
-## Desktop users: do this first
+## Third-party DSH: set DSH_HOME first
 
-`dsh plugin` installs into the **current** `DSH_HOME`. If unset, that is `.dsh` in your user folder — **not** Desktop’s data directory.
+`dsh plugin` installs into the **current** `DSH_HOME`. If unset, that is `.dsh` in your user folder. Third-party distributions often use a different home; point it at the home your DSH actually uses.
 
-PowerShell:
+```bash
+# Linux / macOS
+export DSH_HOME=/path/to/your/dsh-home
+```
 
 ```powershell
-$env:DSH_HOME = "$env:APPDATA\io.github.hairyf.deepseek-harness-desktop\data\dsh"
+# Windows PowerShell
+$env:DSH_HOME = "X:\path\to\your\dsh-home"
 ```
 
 Set this before the install command. The profile name is usually `web`.
@@ -53,7 +57,7 @@ dsh plugin --profile web add file:/absolute/path/to/dsh-plugin-effort-declare
 
 ## After install
 
-Restart DSH (on Desktop, restart its backend). Open **Settings → Reasoning efforts**. Add a custom provider on the Models page first; otherwise this page has nothing to edit.
+Restart DSH. Open **Settings → Reasoning efforts**. Add a custom provider on the Models page first; otherwise this page has nothing to edit.
 
 ## Uninstall
 

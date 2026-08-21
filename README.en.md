@@ -7,19 +7,21 @@
   </samp>
 </p>
 
-[![npm](https://img.shields.io/npm/v/dsh-plugin-effort-declare)](https://www.npmjs.com/package/dsh-plugin-effort-declare)
-[![last commit](https://img.shields.io/github/last-commit/zimodzh/dsh-plugin-effort-declare)](https://github.com/zimodzh/dsh-plugin-effort-declare/commits/master)
-[![repo size](https://img.shields.io/github/repo-size/zimodzh/dsh-plugin-effort-declare)](https://github.com/zimodzh/dsh-plugin-effort-declare)
-[![license](https://img.shields.io/github/license/zimodzh/dsh-plugin-effort-declare)](./LICENSE)
-[![Agent](https://img.shields.io/badge/Agent-Cursor-000000)](https://cursor.com)
+<p align="center">
+  <a href="https://www.npmjs.com/package/dsh-plugin-effort-declare"><img alt="npm" src="https://img.shields.io/npm/v/dsh-plugin-effort-declare"></a>
+  <a href="https://github.com/zimodzh/dsh-plugin-effort-declare/commits/master"><img alt="last commit" src="https://img.shields.io/github/last-commit/zimodzh/dsh-plugin-effort-declare"></a>
+  <a href="https://github.com/zimodzh/dsh-plugin-effort-declare"><img alt="repo size" src="https://img.shields.io/github/repo-size/zimodzh/dsh-plugin-effort-declare"></a>
+  <a href="./LICENSE"><img alt="license" src="https://img.shields.io/github/license/zimodzh/dsh-plugin-effort-declare"></a>
+  <a href="https://github.com/deepseek-ai/deepseek-harness"><img alt="Agent" src="https://img.shields.io/badge/Agent-Deepseek%20Harness-000000"></a>
+</p>
 
 Add reasoning-effort options to OpenAI-compatible models you added yourself, so the Effort row shows up in the composer.
 
-This is a community plugin. It is not an official DeepSeek project and is not endorsed by DeepSeek. Requires DeepSeek Harness **0.1.0-rc.8 or newer**.
+> This is a community plugin. It is not an official DeepSeek project and is not endorsed by DeepSeek. Requires DeepSeek Harness **0.1.0-rc.8 or later**.
 
 ## Why
 
-Custom providers you add on the Models page usually have no reasoning levels, so the composer hides Effort. This plugin adds a **Reasoning efforts** page in Settings: you pick which levels a model can offer. The per-turn choice and the HTTP request still go through DSH. This plugin only writes settings, not API keys.
+Hand-added third-party providers on the Models page need a reasoning-level declaration before Effort appears in the composer. They usually do not declare it. This plugin therefore adds a **Reasoning efforts** page in Settings: you pick which levels a model can offer. The per-turn choice and the HTTP request still go through DSH. This plugin only writes settings, not API keys.
 
 - Does not change models you have not saved
 - Does not change the current or default effort
@@ -41,7 +43,7 @@ Do not use `npm install`. In a terminal:
 dsh plugin --profile web add dsh-plugin-effort-declare
 ```
 
-If you use **DeepSeek Harness Desktop**, set `DSH_HOME` first or the package lands in the wrong folder. See the [install guide](./INSTALL.en.md).
+If you use third-party DSH, you must set `DSH_HOME` first, or the package lands in another directory. See the [install guide](./INSTALL.en.md).
 
 Restart DSH, then open **Settings → Reasoning efforts**. Add a custom provider on the Models page first. GitHub, local folder, and uninstall: [install guide](./INSTALL.en.md).
 

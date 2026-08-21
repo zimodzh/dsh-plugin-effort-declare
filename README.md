@@ -7,19 +7,21 @@
   </samp>
 </p>
 
-[![npm](https://img.shields.io/npm/v/dsh-plugin-effort-declare)](https://www.npmjs.com/package/dsh-plugin-effort-declare)
-[![last commit](https://img.shields.io/github/last-commit/zimodzh/dsh-plugin-effort-declare)](https://github.com/zimodzh/dsh-plugin-effort-declare/commits/master)
-[![repo size](https://img.shields.io/github/repo-size/zimodzh/dsh-plugin-effort-declare)](https://github.com/zimodzh/dsh-plugin-effort-declare)
-[![license](https://img.shields.io/github/license/zimodzh/dsh-plugin-effort-declare)](./LICENSE)
-[![Agent](https://img.shields.io/badge/Agent-Cursor-000000)](https://cursor.com)
+<p align="center">
+  <a href="https://www.npmjs.com/package/dsh-plugin-effort-declare"><img alt="npm" src="https://img.shields.io/npm/v/dsh-plugin-effort-declare"></a>
+  <a href="https://github.com/zimodzh/dsh-plugin-effort-declare/commits/master"><img alt="last commit" src="https://img.shields.io/github/last-commit/zimodzh/dsh-plugin-effort-declare"></a>
+  <a href="https://github.com/zimodzh/dsh-plugin-effort-declare"><img alt="repo size" src="https://img.shields.io/github/repo-size/zimodzh/dsh-plugin-effort-declare"></a>
+  <a href="./LICENSE"><img alt="license" src="https://img.shields.io/github/license/zimodzh/dsh-plugin-effort-declare"></a>
+  <a href="https://github.com/deepseek-ai/deepseek-harness"><img alt="Agent" src="https://img.shields.io/badge/Agent-Deepseek%20Harness-000000"></a>
+</p>
 
 给自己添加的 OpenAI 兼容模型补上「推理强度」选项，对话里的 Effort 行就会出现。
 
-这是社区插件，不是 DeepSeek 官方项目，也未获官方背书。需要 DeepSeek Harness **0.1.0-rc.8 或更新**。
+> 这是社区插件，不是 DeepSeek 官方项目，也未获官方背书。需要 DeepSeek Harness **0.1.0-rc.8 及以上**。
 
 ## 它解决什么
 
-你在「模型」页手工加的第三方接口，通常没有推理档位，所以对话里看不到 Effort。装上本插件后，设置里会多一页 **推理档位**：勾选这个模型能提供哪些档。对话里怎么选、请求怎么发给接口，仍由 DSH 处理。本插件只改设置，不改密钥。
+在「模型」页手工加的第三方供应商，需要先声明能选哪些推理档，对话里才会出现 Effort。但通常它们不会声明。所以本插件在设置里加一页 **推理档位**：勾选这个模型能提供哪些档位。对话里怎么选、请求怎么发给接口，仍由 DSH 处理。本插件只改设置，不改密钥。
 
 - 不会自动改你没保存过的模型
 - 不会改你当前选中的档位，也不会改默认档位
@@ -41,7 +43,7 @@
 dsh plugin --profile web add dsh-plugin-effort-declare
 ```
 
-若使用 **DeepSeek Harness Desktop**，必须先设置 `DSH_HOME`，否则会装到另一份目录。步骤见 [安装说明](./INSTALL.md)。
+若使用第三方DSH，必须先设置 `DSH_HOME`，否则会装到另一份目录。步骤见 [安装说明](./INSTALL.md)。
 
 装完后重启 DSH，打开 **设置 → 推理档位**。请先在「模型」页添加过第三方提供方。GitHub、本地文件夹和卸载也在 [安装说明](./INSTALL.md)。
 

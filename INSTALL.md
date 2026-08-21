@@ -9,14 +9,18 @@
 
 回到 [README](./README.md)。需要 DeepSeek Harness **0.1.0-rc.8 或更新**。不要用 `npm install`，必须用下面的 `dsh plugin` 命令。
 
-## Desktop 用户请先做这一步
+## 第三方 DSH：先设置 DSH_HOME
 
-`dsh plugin` 会装进**当前** `DSH_HOME`。没设置时默认是用户目录下的 `.dsh`，**不是** Desktop 自己的数据目录。
+`dsh plugin` 会装进**当前** `DSH_HOME`。没设置时默认是用户目录下的 `.dsh`。第三方发行版的数据目录往往不是这条路径，需要改成你这份 DSH 实际使用的 home。
 
-PowerShell：
+```bash
+# Linux / macOS
+export DSH_HOME=/path/to/your/dsh-home
+```
 
 ```powershell
-$env:DSH_HOME = "$env:APPDATA\io.github.hairyf.deepseek-harness-desktop\data\dsh"
+# Windows PowerShell
+$env:DSH_HOME = "X:\path\to\your\dsh-home"
 ```
 
 设好后再跑安装命令。配置档名称一般是 `web`。
@@ -53,7 +57,7 @@ dsh plugin --profile web add file:/绝对路径/dsh-plugin-effort-declare
 
 ## 装完之后
 
-重启 DSH（Desktop 请重启其后端）。打开 **设置 → 推理档位**。先在「模型」页添加第三方提供方，本页才会出现可编辑的条目。
+重启 DSH。打开 **设置 → 推理档位**。先在「模型」页添加第三方提供方，本页才会出现可编辑的条目。
 
 ## 卸载
 
