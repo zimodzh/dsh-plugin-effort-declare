@@ -7,6 +7,12 @@
   </samp>
 </p>
 
+[![npm](https://img.shields.io/npm/v/dsh-plugin-effort-declare)](https://www.npmjs.com/package/dsh-plugin-effort-declare)
+[![last commit](https://img.shields.io/github/last-commit/zimodzh/dsh-plugin-effort-declare)](https://github.com/zimodzh/dsh-plugin-effort-declare/commits/master)
+[![repo size](https://img.shields.io/github/repo-size/zimodzh/dsh-plugin-effort-declare)](https://github.com/zimodzh/dsh-plugin-effort-declare)
+[![license](https://img.shields.io/github/license/zimodzh/dsh-plugin-effort-declare)](./LICENSE)
+[![Agent](https://img.shields.io/badge/Agent-Cursor-000000)](https://cursor.com)
+
 Add reasoning-effort options to OpenAI-compatible models you added yourself, so the Effort row shows up in the composer.
 
 This is a community plugin. It is not an official DeepSeek project and is not endorsed by DeepSeek. Requires DeepSeek Harness **0.1.0-rc.8 or newer**.

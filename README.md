@@ -7,6 +7,12 @@
   </samp>
 </p>
 
+[![npm](https://img.shields.io/npm/v/dsh-plugin-effort-declare)](https://www.npmjs.com/package/dsh-plugin-effort-declare)
+[![last commit](https://img.shields.io/github/last-commit/zimodzh/dsh-plugin-effort-declare)](https://github.com/zimodzh/dsh-plugin-effort-declare/commits/master)
+[![repo size](https://img.shields.io/github/repo-size/zimodzh/dsh-plugin-effort-declare)](https://github.com/zimodzh/dsh-plugin-effort-declare)
+[![license](https://img.shields.io/github/license/zimodzh/dsh-plugin-effort-declare)](./LICENSE)
+[![Agent](https://img.shields.io/badge/Agent-Cursor-000000)](https://cursor.com)
+
 给自己添加的 OpenAI 兼容模型补上「推理强度」选项，对话里的 Effort 行就会出现。
 
 这是社区插件，不是 DeepSeek 官方项目，也未获官方背书。需要 DeepSeek Harness **0.1.0-rc.8 或更新**。
