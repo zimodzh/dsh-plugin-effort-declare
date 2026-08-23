@@ -83,7 +83,7 @@ dsh plugin --profile web add file:/absolute/path/to/dsh-plugin-effort-declare
 
 ## After install
 
-Restart DSH. Open **Settings → Reasoning efforts**. Add a custom provider on the Models page first; otherwise this page has nothing to edit.
+Restart DSH. Open **Settings → Reasoning efforts**. The footer is the installed version (for example `0.1.3 © 2026 Stardust`); bumping `package.json` only shows up after you rebuild and reinstall. Add a custom provider on the Models page first; otherwise this page has nothing to edit.
 
 ## Uninstall
 

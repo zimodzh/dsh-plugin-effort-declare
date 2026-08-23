@@ -2,11 +2,13 @@
  * Standalone twin of the dsh-web-ui client-bundle preset.
  * Host ESM + browser CJS factory; @deepseek-ai/* stays external.
  */
+import { readFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { basename, dirname, relative, resolve as resolvePath, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { UserConfig } from 'tsdown'
 import { transform } from 'lightningcss'
+import { COPYRIGHT_FROM } from './src/core/attribution.ts'
 
 const ID = 'dsh-plugin-effort-declare'
 
@@ -26,6 +28,27 @@ const CSS_VIRTUAL_PREFIX = '\0dsh-css:'
 const CSS_VIRTUAL_SUFFIX = '.mjs'
 
 const REPOSITORY_ROOT = resolvePath(fileURLToPath(new URL('.', import.meta.url)))
+
+function pluginVersion(): string {
+  const pkg = JSON.parse(readFileSync(resolvePath(REPOSITORY_ROOT, 'package.json'), 'utf8')) as {
+    version: string
+  }
+  if (typeof pkg.version !== 'string' || pkg.version.trim() === '') {
+    throw new Error('package.json version must be a non-empty string')
+  }
+  return pkg.version
+}
+
+function copyrightToUtc(): number {
+  const to = new Date().getUTCFullYear()
+  if (!Number.isInteger(to) || to < COPYRIGHT_FROM) {
+    throw new Error(`UTC build year ${String(to)} is before copyright start ${String(COPYRIGHT_FROM)}`)
+  }
+  return to
+}
+
+const PLUGIN_VERSION = pluginVersion()
+const COPYRIGHT_TO = copyrightToUtc()
 
 function browserSourcePath(source: string, sourcemapPath: string): string {
   if (!source.startsWith('.')) return source
@@ -61,6 +84,8 @@ const clientConfig: UserConfig = {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV ?? 'production'),
     'import.meta.env.MODE': JSON.stringify(process.env.NODE_ENV ?? 'production'),
     'import.meta.env': JSON.stringify({ MODE: process.env.NODE_ENV ?? 'production' }),
+    __PLUGIN_VERSION__: JSON.stringify(PLUGIN_VERSION),
+    __COPYRIGHT_TO__: JSON.stringify(COPYRIGHT_TO),
   },
   noExternal: (id: string) => (CLIENT_EXTERNALS.includes(id) ? undefined : true),
   plugins: [{

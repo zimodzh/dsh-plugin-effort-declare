@@ -52,6 +52,8 @@ pnpm pack      # confirm the tarball contains lib/ and cordis.patch.yml
 pnpm publish
 ```
 
+The settings footer version and copyright end year are frozen into the client bundle at `pnpm build` (`package.json` version plus the UTC year at that moment). Bump the version, then build / publish. Do not read the wall clock at DSH startup.
+
 `pnpm publish` fails on an unclean Git tree. Commit first (and preferably push). Do not pass `--no-git-checks`.
 
 After publish, users update with `dsh plugin --profile web update dsh-plugin-effort-declare` or `add dsh-plugin-effort-declare@latest`. Authors do not implement an update command; official `dsh plugin` forwards the rest of the line to pnpm.

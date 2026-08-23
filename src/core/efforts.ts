@@ -26,7 +26,10 @@ export function writeOff(
   const next: ReasoningEfforts = { ...efforts }
   delete next.off
   if (mode === 'empty') next.off = null
-  else if (mode === 'value') next.off = value.trim().length > 0 ? value : 'none'
+  else if (mode === 'value') {
+    const trimmed = value.trim()
+    next.off = trimmed.length > 0 ? trimmed : 'none'
+  }
   return next
 }
 

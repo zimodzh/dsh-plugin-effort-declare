@@ -52,6 +52,8 @@ pnpm pack      # 确认 tarball 含 lib/ 与 cordis.patch.yml
 pnpm publish
 ```
 
+页脚版本与版权结束年在 `pnpm build` 时写入 client bundle（`package.json` 的 version + 当时的 UTC 年）。先改 version 再 build / publish。不要在运行时读系统时钟。
+
 `pnpm publish` 在 Git 有未提交改动时会失败。应先 commit（建议再 push），不要用 `--no-git-checks` 绕过。
 
 发布后用户用 `dsh plugin --profile web update dsh-plugin-effort-declare` 或 `add dsh-plugin-effort-declare@latest` 更新。作者无需在插件里实现更新命令；官方 `dsh plugin` 会把参数转给 pnpm。

@@ -34,6 +34,7 @@ Hand-added third-party providers on the Models page need a reasoning-level decla
 | Reasoning efforts page | Choose levels per model; change the gateway spelling if it differs |
 | Presets | DeepSeek compatible, OpenAI compatible, or on/off only. A preset **replaces** that dialect; it does not stack |
 | vs Models | Models owns the endpoint, keys, and model list; this page only declares which reasoning levels are offered |
+| Version footer | Bottom of the page shows the plugin version and copyright years (frozen at pack time; opening DSH does not advance the year) |
 
 ## Install
 
@@ -51,7 +52,7 @@ dsh plugin --profile web update dsh-plugin-effort-declare
 
 Or `add dsh-plugin-effort-declare@latest`. Details: [install guide](./INSTALL.en.md) **Update**.
 
-Restart DSH, then open **Settings → Reasoning efforts**. Add a custom provider on the Models page first. GitHub, local folder, and uninstall: [install guide](./INSTALL.en.md).
+Restart DSH, then open **Settings → Reasoning efforts**. The footer shows which version is installed. Add a custom provider on the Models page first. GitHub, local folder, and uninstall: [install guide](./INSTALL.en.md).
 
 ## Usage
 

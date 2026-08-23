@@ -23,7 +23,13 @@ import {
   thinkingFormatChoices,
 } from '../src/core/drafts.ts'
 import { PI_AI_THINKING_FORMAT_UNION } from './fixtures/pi-ai-thinking-format-union.ts'
-import { loadDrafts } from '../src/client/load-drafts.ts'
+import {
+  foldReloadNotices,
+  isOwnDocumentEcho,
+  loadDrafts,
+  waitForNamespaceRevision,
+  waitForNamespaceRevisionChange,
+} from '../src/client/load-drafts.ts'
 import { validateSaveDraft, type SchemaOps } from '../src/client/schema-ops.ts'
 import type { IApiClient } from '@deepseek-ai/dsh-api-remotes/client'
 import type { SettingsDescribeFace } from '@deepseek-ai/dsh-client-ui-settings/client'
@@ -34,6 +40,7 @@ import {
   OPENAI_PRESET,
   TOGGLE_PRESET,
 } from '../src/core/presets.ts'
+import { COPYRIGHT_FROM, COPYRIGHT_HOLDER, formatAttribution } from '../src/core/attribution.ts'
 
 describe('catalog pin', () => {
   it('pins thinking levels to the llm-pi-ai rc.8 / rc.2 set', () => {
@@ -140,6 +147,8 @@ describe('off tri-state', () => {
     expect(readOff({ off: 'none', high: 'high' })).toEqual({ mode: 'value', value: 'none' })
     expect(writeOff({ high: 'high' }, 'empty', 'none')).toEqual({ high: 'high', off: null })
     expect(writeOff({ high: 'high' }, 'value', 'none')).toEqual({ high: 'high', off: 'none' })
+    expect(writeOff({ high: 'high' }, 'value', '  none  ')).toEqual({ high: 'high', off: 'none' })
+    expect(writeOff({ high: 'high' }, 'value', '   ')).toEqual({ high: 'high', off: 'none' })
     expect(writeOff({ off: null, high: 'high' }, 'absent', 'none')).toEqual({ high: 'high' })
   })
 })
@@ -768,6 +777,132 @@ describe('loadDrafts', () => {
       'openai',
     ])
   })
+
+  it('does not call ensure() in snapshot mode', async () => {
+    let ensured = 0
+    const describe = {
+      ensure: async () => { ensured += 1 },
+      getSnapshot: () => ({
+        status: 'ready' as const,
+        error: null,
+        view: {
+          writable: true,
+          hasDocument: true,
+          namespaces: [{
+            ns: 'llm-pi-ai',
+            schema: {},
+            value: {},
+            user: {},
+            applies: 'live' as const,
+            secrets: [],
+            revision: 4,
+          }],
+        },
+      }),
+    } satisfies Pick<SettingsDescribeFace, 'ensure' | 'getSnapshot'>
+    const api = {
+      llm: {
+        providers: async () => ({
+          result: { ok: true as const, value: { providers: [] } },
+        }),
+      },
+    }
+    await loadDrafts(api as Pick<IApiClient, 'llm'>, describe, stubSchema, 'snapshot')
+    expect(ensured).toBe(0)
+    await loadDrafts(api as Pick<IApiClient, 'llm'>, describe, stubSchema, 'ensure')
+    expect(ensured).toBe(1)
+  })
+})
+
+function revisionMirror(initial: number) {
+  let revision = initial
+  const listeners = new Set<() => void>()
+  const snapshot = () => ({
+    status: 'ready' as const,
+    error: null,
+    view: {
+      writable: true,
+      hasDocument: true,
+      namespaces: [{
+        ns: 'llm-pi-ai',
+        schema: {},
+        value: {},
+        user: {},
+        applies: 'live' as const,
+        secrets: [],
+        revision,
+      }],
+    },
+  })
+  return {
+    getSnapshot: snapshot,
+    subscribe: (listener: () => void) => {
+      listeners.add(listener)
+      return () => { listeners.delete(listener) }
+    },
+    bump(next: number) {
+      revision = next
+      for (const listener of listeners) listener()
+    },
+  }
+}
+
+describe('reload settlement helpers', () => {
+  it('treats the echoed revision and older ones as own document-updated', () => {
+    expect(isOwnDocumentEcho(5, 5)).toBe(true)
+    expect(isOwnDocumentEcho(5, 4)).toBe(true)
+    expect(isOwnDocumentEcho(5, 6)).toBe(false)
+    expect(isOwnDocumentEcho(undefined, 5)).toBe(false)
+  })
+
+  it('clears conflict/error on a clean reload and keeps saved', () => {
+    const next = foldReloadNotices({
+      poke: { kind: 'conflict', text: 'old' },
+      other: { kind: 'error', text: 'err' },
+      kept: { kind: 'saved', text: 'ok' },
+      gone: { kind: 'saved', text: 'bye' },
+    }, {
+      conflicted: ['poke'],
+      conflictNotice: { kind: 'conflict', text: 'new' },
+      liveProviders: ['poke', 'other', 'kept'],
+    })
+    expect(next).toEqual({
+      poke: { kind: 'conflict', text: 'new' },
+      kept: { kind: 'saved', text: 'ok' },
+    })
+  })
+
+  it('waits until the mirror subscribe shows the target revision', async () => {
+    const mirror = revisionMirror(3)
+    const pending = waitForNamespaceRevision(mirror, 'llm-pi-ai', 8)
+    queueMicrotask(() => { mirror.bump(8) })
+    await expect(pending).resolves.toBe('matched')
+  })
+
+  it('resolves immediately when the snapshot already has the revision', async () => {
+    const mirror = revisionMirror(8)
+    await expect(waitForNamespaceRevision(mirror, 'llm-pi-ai', 8)).resolves.toBe('matched')
+  })
+
+  it('treats a later snapshot revision as already caught up', async () => {
+    const mirror = revisionMirror(8)
+    await expect(waitForNamespaceRevision(mirror, 'llm-pi-ai', 5)).resolves.toBe('matched')
+  })
+
+  it('aborts waitForNamespaceRevision when the signal fires', async () => {
+    const mirror = revisionMirror(1)
+    const abort = new AbortController()
+    const pending = waitForNamespaceRevision(mirror, 'llm-pi-ai', 9, abort.signal)
+    abort.abort()
+    await expect(pending).resolves.toBe('aborted')
+  })
+
+  it('waitForNamespaceRevisionChange resolves when revision moves', async () => {
+    const mirror = revisionMirror(4)
+    const pending = waitForNamespaceRevisionChange(mirror, 'llm-pi-ai', 4)
+    queueMicrotask(() => { mirror.bump(5) })
+    await expect(pending).resolves.toBe('changed')
+  })
 })
 
 describe('validateSaveDraft', () => {
@@ -812,6 +947,26 @@ describe('validateSaveDraft', () => {
     expect(error).toBe('rejected by schema')
     const mutate = error === undefined
     expect(mutate).toBe(false)
+  })
+})
+
+describe('attribution footer', () => {
+  it('starts copyright at 2026 and names Stardust', () => {
+    expect(COPYRIGHT_FROM).toBe(2026)
+    expect(COPYRIGHT_HOLDER).toBe('Stardust')
+  })
+
+  it('uses a single year when from and to match', () => {
+    expect(formatAttribution('0.1.2', 2026, 2026)).toBe('0.1.2 © 2026 Stardust')
+  })
+
+  it('uses an en-dash range when the pack year is later', () => {
+    expect(formatAttribution('0.2.0', 2026, 2028)).toBe('0.2.0 © 2026–2028 Stardust')
+  })
+
+  it('throws on an empty version or a range that ends before it starts', () => {
+    expect(() => formatAttribution('  ', 2026, 2026)).toThrow(/non-empty/)
+    expect(() => formatAttribution('0.1.2', 2026, 2025)).toThrow(/invalid copyright range/)
   })
 })
 

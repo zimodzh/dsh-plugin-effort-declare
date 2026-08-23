@@ -8,7 +8,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import { EffortDeclareSection } from './EffortDeclareSection.tsx'
-import type { EffortDeclareSectionInjected, InvalidationSource } from './EffortDeclareSection.tsx'
+import type { EffortDeclareSectionInjected, Invalidation } from './EffortDeclareSection.tsx'
 import { bindSchema } from './schema-ops.ts'
 import { LLM_PI_AI_NS } from '../core/catalog.ts'
 import { NS, en, zh, type EffortDeclareKey } from './locales.ts'
@@ -60,23 +60,25 @@ export function apply(ctx: ClientContext): void {
   })
   const t = ctx.locale.bind(NS)
   const describe = ctx.settingsScope.describe()
-  const invalidation = new Set<(source: InvalidationSource) => void>()
+  const invalidation = new Set<(event: Invalidation) => void>()
 
   ctx.effect(() => {
-    const emit = (source: InvalidationSource) => {
-      for (const listener of invalidation) listener(source)
+    const emit = (event: Invalidation) => {
+      for (const listener of invalidation) listener(event)
     }
     // Mirror subscribe fires on every namespace (theme, locale, own acceptView).
-    // Only fold writable from that; llm-pi-ai document changes come from the
-    // Host event below so a dirty card is not treated as a conflict.
+    // Only fold writable from that. llm-pi-ai document changes come from
+    // settings/document-updated; the section waits until the mirror revision
+    // has caught up instead of calling ensure(), and skips the echo of its
+    // own mutate. connection/reset uses ensure() so an in-flight load is awaited.
     const disposers = [
-      describe.subscribe(() => { emit('writable') }),
-      ctx.remote.$on('settings/document-updated', (ns: string) => {
+      describe.subscribe(() => { emit({ source: 'writable' }) }),
+      ctx.remote.$on('settings/document-updated', (ns: string, revision: number) => {
         if (ns !== LLM_PI_AI_NS) return
-        emit('settings')
+        emit({ source: 'settings', revision })
       }),
-      ctx.remote.$on('llm/adapters-updated', () => { emit('directory') }),
-      ctx.on('connection/reset', () => { emit('directory') }),
+      ctx.remote.$on('llm/adapters-updated', () => { emit({ source: 'directory' }) }),
+      ctx.on('connection/reset', () => { emit({ source: 'reset' }) }),
     ]
     return () => {
       for (const dispose of disposers) dispose()

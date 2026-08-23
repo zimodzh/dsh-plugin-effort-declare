@@ -30,18 +30,32 @@ import { applyPresetCompat, applyPresetEfforts, PRESETS, type PresetId } from '.
 import { buildSaveOps } from '../core/path-ops.ts'
 import { cloneModels, cloneObject } from '../core/paths.ts'
 import { modelEffortError } from '../core/validate.ts'
-import { loadDrafts } from './load-drafts.ts'
+import { PLUGIN_FOOTER_TEXT } from './build-info.ts'
+import {
+  foldReloadNotices,
+  isOwnDocumentEcho,
+  loadDrafts,
+  waitForNamespaceRevision,
+  waitForNamespaceRevisionChange,
+  type LoadDraftsMode,
+} from './load-drafts.ts'
 import { validateSaveDraft, type SchemaOps } from './schema-ops.ts'
 import type { EffortDeclareKey } from './locales.ts'
 import css from './effort-declare.module.css'
 
-export type InvalidationSource = 'settings' | 'directory' | 'writable'
+export type InvalidationSource = 'settings' | 'directory' | 'reset' | 'writable'
+
+export type Invalidation =
+  | { source: 'writable' }
+  | { source: 'directory' }
+  | { source: 'reset' }
+  | { source: 'settings'; revision: number }
 
 export interface EffortDeclareSectionInjected {
   api: Pick<IApiClient, 'settings' | 'llm'>
   describe: SettingsDescribeFace
   schema: SchemaOps
-  subscribeInvalidate: (listener: (source: InvalidationSource) => void) => () => void
+  subscribeInvalidate: (listener: (event: Invalidation) => void) => () => void
 }
 
 export interface EffortDeclareSectionProps extends Partial<EffortDeclareSectionInjected> {
@@ -328,58 +342,133 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
   const [notices, setNotices] = useState<Record<string, CardNotice>>({})
   const generationRef = useRef(0)
   const draftsRef = useRef(drafts)
+  const echoedRevisionRef = useRef<number | undefined>(undefined)
+  const pendingRevisionRef = useRef<number | undefined>(undefined)
+  const busyRouteRef = useRef<string | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
   draftsRef.current = drafts
 
-  const reload = useCallback((preserveDirty: boolean): void => {
+  const applyDrafts = (next: RouteDraft[] | ((current: RouteDraft[]) => RouteDraft[])): void => {
+    const resolved = typeof next === 'function' ? next(draftsRef.current) : next
+    draftsRef.current = resolved
+    setDrafts(resolved)
+  }
+
+  const snapshotMode = (): LoadDraftsMode => (
+    describe === undefined || describe.getSnapshot().status === 'idle' ? 'ensure' : 'snapshot'
+  )
+
+  const beginGeneration = (): { generation: number; signal: AbortSignal } => {
+    abortRef.current?.abort()
+    const abort = new AbortController()
+    abortRef.current = abort
+    return { generation: nextGeneration(generationRef), signal: abort.signal }
+  }
+
+  const failGeneration = (generation: number, failure: unknown): void => {
+    if (!generationIsCurrent(generationRef, generation)) return
+    setStatus('error')
+    setError(failure instanceof Error ? failure.message : t('loadError'))
+  }
+
+  const settleReload = (
+    generation: number,
+    preserveDirty: boolean,
+    result: Awaited<ReturnType<typeof loadDrafts>>,
+  ): void => {
+    if (!generationIsCurrent(generationRef, generation)) return
+    setWritable(result.writable)
+    setFormats(result.formats)
+    if (result.error !== undefined) {
+      setStatus('error')
+      setError(result.error)
+      return
+    }
+    const merged = mergeLoadedDrafts(draftsRef.current, result.drafts, { preserveDirty })
+    applyDrafts(merged.drafts)
+    setNotices(current => foldReloadNotices(current, {
+      conflicted: merged.conflicted,
+      conflictNotice: { kind: 'conflict', text: t('dirtyConflict') },
+      liveProviders: merged.drafts.map(draft => draft.provider),
+    }))
+    setStatus('ready')
+  }
+
+  const loadSnapshotThenSettle = async (generation: number, preserveDirty: boolean): Promise<void> => {
+    if (api === undefined || describe === undefined || schema === undefined) return
+    if (!generationIsCurrent(generationRef, generation)) return
+    try {
+      const result = await loadDrafts(api, describe, schema, 'snapshot')
+      settleReload(generation, preserveDirty, result)
+    } catch (failure) {
+      failGeneration(generation, failure)
+    }
+  }
+
+  const reload = useCallback((preserveDirty: boolean, mode: LoadDraftsMode = 'ensure'): void => {
     if (api === undefined || describe === undefined || schema === undefined) {
       setStatus('error')
       setError(t('loadError'))
       return
     }
-    const generation = nextGeneration(generationRef)
+    const { generation } = beginGeneration()
     if (draftsRef.current.length === 0) setStatus('loading')
     setError('')
-    void loadDrafts(api, describe, schema).then((result) => {
-      if (!generationIsCurrent(generationRef, generation)) return
-      setWritable(result.writable)
-      setFormats(result.formats)
-      if (result.error !== undefined) {
-        setStatus('error')
-        setError(result.error)
-        return
-      }
-      const merged = mergeLoadedDrafts(draftsRef.current, result.drafts, { preserveDirty })
-      setDrafts(merged.drafts)
-      if (merged.conflicted.length > 0) {
-        setNotices(current => {
-          const next = { ...current }
-          for (const provider of merged.conflicted) {
-            next[provider] = { kind: 'conflict', text: t('dirtyConflict') }
-          }
-          return next
-        })
-      }
-      setStatus('ready')
+    void loadDrafts(api, describe, schema, mode).then((result) => {
+      settleReload(generation, preserveDirty, result)
     }, (failure: unknown) => {
-      if (!generationIsCurrent(generationRef, generation)) return
-      setStatus('error')
-      setError(failure instanceof Error ? failure.message : t('loadError'))
+      failGeneration(generation, failure)
     })
   }, [api, describe, schema, t])
 
-  useEffect(() => { reload(false) }, [reload])
+  const refreshAtRevision = useCallback((revision: number, preserveDirty: boolean): void => {
+    if (api === undefined || describe === undefined || schema === undefined) return
+    const { generation, signal } = beginGeneration()
+    if (draftsRef.current.length === 0) setStatus('loading')
+    setError('')
+    void waitForNamespaceRevision(describe, LLM_PI_AI_NS, revision, signal).then((outcome) => {
+      if (outcome === 'aborted' || !generationIsCurrent(generationRef, generation)) return
+      return loadSnapshotThenSettle(generation, preserveDirty)
+    }, (failure: unknown) => {
+      failGeneration(generation, failure)
+    })
+  }, [api, describe, schema, t])
+
+  const flushPendingSettings = (refresh: (revision: number, preserveDirty: boolean) => void): void => {
+    const pending = pendingRevisionRef.current
+    pendingRevisionRef.current = undefined
+    if (pending === undefined) return
+    if (isOwnDocumentEcho(echoedRevisionRef.current, pending)) return
+    refresh(pending, true)
+  }
+
+  useEffect(() => { reload(false, 'ensure') }, [reload])
+  useEffect(() => () => {
+    abortRef.current?.abort()
+    nextGeneration(generationRef)
+  }, [])
 
   useEffect(() => {
     if (props.subscribeInvalidate === undefined) return undefined
-    return props.subscribeInvalidate((source) => {
-      if (source === 'writable') {
+    return props.subscribeInvalidate((event) => {
+      if (event.source === 'writable') {
         const view = describe?.getSnapshot().view
         if (view !== undefined) setWritable(view.writable)
         return
       }
-      if (source === 'settings' || source === 'directory') reload(true)
+      if (event.source === 'settings') {
+        if (busyRouteRef.current !== null) {
+          pendingRevisionRef.current = event.revision
+          return
+        }
+        if (isOwnDocumentEcho(echoedRevisionRef.current, event.revision)) return
+        refreshAtRevision(event.revision, true)
+        return
+      }
+      if (event.source === 'directory') reload(true, snapshotMode())
+      if (event.source === 'reset') reload(true, 'ensure')
     })
-  }, [describe, props.subscribeInvalidate, reload])
+  }, [describe, props.subscribeInvalidate, refreshAtRevision, reload])
 
   const patchNotice = (provider: string, notice: CardNotice | undefined): void => {
     setNotices(current => {
@@ -392,7 +481,7 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
 
   const save = async (draft: RouteDraft): Promise<void> => {
     if (api === undefined || describe === undefined || schema === undefined) return
-    if (status === 'loading' || busyRoute !== null) {
+    if (status === 'loading' || busyRouteRef.current !== null) {
       patchNotice(draft.provider, { kind: 'error', text: t('saveBusy') })
       return
     }
@@ -403,6 +492,7 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
       patchNotice(draft.provider, { kind: 'error', text: blocking })
       return
     }
+    busyRouteRef.current = draft.provider
     setBusyRoute(draft.provider)
     patchNotice(draft.provider, undefined)
     try {
@@ -414,7 +504,7 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
         afterCompat: draft.compat,
       })
       if (ops.length === 0) {
-        setDrafts(current => current.map(row => row.provider === draft.provider ? alignDraft(row) : row))
+        applyDrafts(current => current.map(row => row.provider === draft.provider ? alignDraft(row) : row))
         return
       }
       const willWriteCompat = ops.some(op => (
@@ -454,12 +544,21 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
           kind: conflict ? 'conflict' : 'error',
           text: conflict ? t('conflict') : response.result.error.message,
         })
-        if (conflict) reload(true)
+        if (conflict) {
+          const { generation, signal } = beginGeneration()
+          void waitForNamespaceRevisionChange(describe, LLM_PI_AI_NS, draft.revision, signal).then((outcome) => {
+            if (outcome === 'aborted' || !generationIsCurrent(generationRef, generation)) return
+            return loadSnapshotThenSettle(generation, true)
+          }, (failure: unknown) => {
+            failGeneration(generation, failure)
+          })
+        }
         return
       }
       const view = response.result.value
+      echoedRevisionRef.current = view.revision
       describe.acceptView(view)
-      setDrafts(current => applySaveSuccess(current, draft.provider, {
+      applyDrafts(applySaveSuccess(draftsRef.current, draft.provider, {
         user: view.user ?? {},
         revision: view.revision,
       }))
@@ -470,7 +569,9 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
         text: failure instanceof Error ? failure.message : t('loadError'),
       })
     } finally {
+      busyRouteRef.current = null
       setBusyRoute(null)
+      flushPendingSettings(refreshAtRevision)
     }
   }
 
@@ -491,7 +592,7 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
       {status === 'error' ? <p className={css.error}>{error}</p> : null}
       {showReload
         ? (
-          <button type="button" className={css.secondaryButton} onClick={() => { reload(true) }}>{t('reload')}</button>
+          <button type="button" className={css.secondaryButton} onClick={() => { reload(true, snapshotMode()) }}>{t('reload')}</button>
         )
         : null}
       {showEmpty
@@ -517,12 +618,12 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
                 t={t}
                 onChange={(next) => {
                   patchNotice(next.provider, undefined)
-                  setDrafts(current => current.map(row => row.provider === next.provider ? next : row))
+                  applyDrafts(current => current.map(row => row.provider === next.provider ? next : row))
                 }}
                 onSave={(next) => { void save(next) }}
                 onCancel={(next) => {
                   patchNotice(next.provider, undefined)
-                  setDrafts(current => current.map(row => row.provider === next.provider
+                  applyDrafts(current => current.map(row => row.provider === next.provider
                     ? {
                         ...row,
                         models: cloneModels(row.originalModels),
@@ -535,6 +636,7 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
           </ul>
         )
         : null}
+      <p className={css.footer}>{PLUGIN_FOOTER_TEXT}</p>
     </div>
   )
 }

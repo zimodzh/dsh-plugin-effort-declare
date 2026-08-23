@@ -23,7 +23,8 @@ pnpm test
 4. Validation: empty object, Off-only, and unknown effort keys return an error code without throwing.
 5. List filter: catalog, `deepseek-official`, and non-completions protocols are not editable.
 6. `thinkingFormat` is pinned to the live-schema fixture in [`fixtures/pi-ai-thinking-format-union.ts`](./fixtures/pi-ai-thinking-format-union.ts) (same member set as llm-pi-ai 0.1.0-rc.8 / 0.1.1-rc.2); UI choices are empty when the live schema has no union.
-7. `loadDrafts` reads `user` not `value`; `cloneModels` skips non-objects; post-save revision bump; id-keyed 3-way merge (membership add/delete, cleared declarations, revision-only bumps are not false conflicts); generation; dirty matches pathOps.
+7. `loadDrafts` reads `user` not `value`; `cloneModels` skips non-objects; post-save revision bump; id-keyed 3-way merge (membership add/delete, cleared declarations, revision-only bumps are not false conflicts); generation; dirty matches pathOps. Refresh does not call `ensure()`; it waits until the mirror revision has caught up (a newer snapshot does not hang); a no-conflict reload clears conflict/error notices; the page’s own document-updated revision (including older echoes) is not treated as someone else’s conflict. Off value mode stores the trimmed string.
 8. `validateSaveDraft`: a schema failure blocks mutate; missing nodes are skipped.
+9. Footer `formatAttribution`: a single year when from === to, en dash for a later pack year; empty version or an end year before 2026 throws.
 
 When you add a level, preset, or filter rule, add matching assertions here and keep the [CONTRIBUTING.en.md](../CONTRIBUTING.en.md) boundary in sync.

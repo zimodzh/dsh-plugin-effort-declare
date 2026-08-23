@@ -16,12 +16,13 @@
 | 文件 | 说明 |
 | --- | --- |
 | [`catalog.ts`](./catalog.ts) | 规范档位顺序、`thinkingFormat` 回退列表、`llm-pi-ai` / DeepSeek 相关常量。 |
-| [`efforts.ts`](./efforts.ts) | `reasoningEfforts` 读写、Off 三态、校验（空对象 / 只开 Off / 未知键返回错误码，不抛异常）。 |
+| [`efforts.ts`](./efforts.ts) | `reasoningEfforts` 读写、Off 三态（value 模式写入 `trim()` 后的字符串）、校验（空对象 / 只开 Off / 未知键返回错误码，不抛异常）。 |
 | [`presets.ts`](./presets.ts) | DeepSeek、OpenAI、仅开/关三套预设；每套对三个方言键都表态；spread 到已有模型行与路由 `compat`。 |
 | [`path-ops.ts`](./path-ops.ts) | 与官方模型页相同的一层键 diff；`buildSaveOps` 使用 `settingsPath`，只提交该路由的 `models` 整表和有差异的 `compat` 键。 |
 | [`drafts.ts`](./drafts.ts) | 用户层草稿、dirty 与 pathOps 一致、保存后 revision。刷新时以最新用户层模型名单为成员真理，按 id 贴回未保存的 `reasoningEfforts`（含已清除=删键）；`compat` 按键三路合并。冲突仅当本地脏字段的 originals 也变了（只 bump revision 或别的卡保存不报）。 |
 | [`paths.ts`](./paths.ts) | 嵌套读取、对象与模型表的 clone（非对象行跳过）。 |
 | [`filter.ts`](./filter.ts) | 哪些路由可编辑：手工 `llm-pi-ai` + openai-completions；排除 catalog 与官方 DeepSeek。 |
 | [`validate.ts`](./validate.ts) | 对单行 `reasoningEfforts` 调用校验。 |
+| [`attribution.ts`](./attribution.ts) | 设置页页脚：`version © 年 Stardust`。首年写死 2026，结束年由打包时的 UTC 年注入，不是用户打开 DSH 的日期。 |
 
 **缺席字段**表示默认关闭。不要把「未声明」写成 `reasoningEfforts: false`——`false` 在官方语义里是从 catalog 模型上剥掉推理。

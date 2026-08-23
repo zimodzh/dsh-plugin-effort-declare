@@ -23,6 +23,7 @@
   "include": [
     "src/client/**/*.ts",
     "src/client/**/*.tsx",
+    "src/client/globals.d.ts",
     "src/core/**/*.ts",
     "src/css-modules.d.ts"
   ]
