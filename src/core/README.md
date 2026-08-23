@@ -9,7 +9,7 @@
 
 本插件的领域逻辑：无 React、无 Cordis 服务实例。设置页与 Vitest 都只依赖这些纯函数，因此档位语义可以在不启动 DSH 的情况下回归。
 
-规范键名与 `thinkingFormat` 取值对齐 `@deepseek-ai/dsh-llm-pi-ai`（0.1.0-rc.8）。仓库内有测试钉白名单；UI 可选项只来自现场 schema union。
+规范键名与 `thinkingFormat` 取值对齐 `@deepseek-ai/dsh-llm-pi-ai`（0.1.0-rc.8；0.1.1-rc.2 档位集合相同）。`thinkingFormat` 由 [`tests/fixtures/pi-ai-thinking-format-union.ts`](../../tests/fixtures/pi-ai-thinking-format-union.ts) 钉现场 schema；档位键由测试钉本地白名单。UI 可选项只来自现场 schema union。
 
 ## 这个目录里有什么
 
@@ -19,7 +19,7 @@
 | [`efforts.ts`](./efforts.ts) | `reasoningEfforts` 读写、Off 三态、校验（空对象 / 只开 Off / 未知键返回错误码，不抛异常）。 |
 | [`presets.ts`](./presets.ts) | DeepSeek、OpenAI、仅开/关三套预设；每套对三个方言键都表态；spread 到已有模型行与路由 `compat`。 |
 | [`path-ops.ts`](./path-ops.ts) | 与官方模型页相同的一层键 diff；`buildSaveOps` 使用 `settingsPath`，只提交该路由的 `models` 整表和有差异的 `compat` 键。 |
-| [`drafts.ts`](./drafts.ts) | 用户层草稿、dirty 与 pathOps 一致、保存后 revision、脏卡合并、generation。 |
+| [`drafts.ts`](./drafts.ts) | 用户层草稿、dirty 与 pathOps 一致、保存后 revision。刷新时以最新用户层模型名单为成员真理，按 id 贴回未保存的 `reasoningEfforts`（含已清除=删键）；`compat` 按键三路合并。冲突仅当本地脏字段的 originals 也变了（只 bump revision 或别的卡保存不报）。 |
 | [`paths.ts`](./paths.ts) | 嵌套读取、对象与模型表的 clone（非对象行跳过）。 |
 | [`filter.ts`](./filter.ts) | 哪些路由可编辑：手工 `llm-pi-ai` + openai-completions；排除 catalog 与官方 DeepSeek。 |
 | [`validate.ts`](./validate.ts) | 对单行 `reasoningEfforts` 调用校验。 |

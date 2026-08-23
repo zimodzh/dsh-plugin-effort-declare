@@ -17,7 +17,7 @@
 
 给自己添加的 OpenAI 兼容模型补上「推理强度」选项，对话里的 Effort 行就会出现。
 
-> 这是社区维护的第三方插件，不是 DeepSeek 官方项目，也未获官方背书。需要 DeepSeek Harness **0.1.0-rc.8 及以上**。
+> 这是社区维护的第三方插件，不是 DeepSeek 官方项目，也未获官方背书。需要 **DeepSeek Harness 0.1.0-rc.8** 及以上， **DeepSeek Harness 0.1.0-rc.8** 之前的版本没测试过，不保证可用。
 
 ## 它解决什么
 

@@ -15,11 +15,14 @@ import {
   applySaveSuccess,
   draftDirty,
   generationIsCurrent,
+  mergeCompat,
   mergeLoadedDrafts,
+  mergeModelsById,
   nextGeneration,
   routeDraftFromUserProfile,
   thinkingFormatChoices,
 } from '../src/core/drafts.ts'
+import { PI_AI_THINKING_FORMAT_UNION } from './fixtures/pi-ai-thinking-format-union.ts'
 import { loadDrafts } from '../src/client/load-drafts.ts'
 import { validateSaveDraft, type SchemaOps } from '../src/client/schema-ops.ts'
 import type { IApiClient } from '@deepseek-ai/dsh-api-remotes/client'
@@ -33,11 +36,12 @@ import {
 } from '../src/core/presets.ts'
 
 describe('catalog pin', () => {
-  it('pins thinking levels to the llm-pi-ai rc.8 set', () => {
+  it('pins thinking levels to the llm-pi-ai rc.8 / rc.2 set', () => {
     expect([...THINKING_LEVELS]).toEqual(['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'])
   })
 
-  it('pins thinkingFormat fallback to the llm-pi-ai rc.8 set', () => {
+  it('matches the checked-in thinkingFormat schema fixture, not catalog.ts as upstream', () => {
+    expect(unionStringChoices(PI_AI_THINKING_FORMAT_UNION)).toEqual([...FALLBACK_THINKING_FORMATS])
     expect([...FALLBACK_THINKING_FORMATS]).toEqual([
       'openai',
       'deepseek',
@@ -340,7 +344,7 @@ describe('applySaveSuccess / mergeLoadedDrafts / generation', () => {
     expect(next[1]?.compat.extra).toBe(true)
   })
 
-  it('preserves dirty models/compat and reports conflict', () => {
+  it('keeps local efforts and reports conflict when remote originals also changed', () => {
     const current = pokeDraft()
     current.models = [{ id: 'm1', reasoningEfforts: { max: 'max' } }]
     const incoming = routeDraftFromUserProfile({
@@ -349,16 +353,131 @@ describe('applySaveSuccess / mergeLoadedDrafts / generation', () => {
       settingsPath: ['providers', 'poke'],
       revision: 9,
       userProfile: {
-        models: [{ id: 'm1', reasoningEfforts: { high: 'high' } }],
+        models: [{ id: 'm1', name: 'Renamed', reasoningEfforts: { low: 'low' } }],
         compat: { thinkingFormat: 'openai' },
       },
     })
     const { drafts, conflicted } = mergeLoadedDrafts([current], [incoming], { preserveDirty: true })
     expect(conflicted).toEqual(['poke'])
+    expect(drafts[0]?.models).toEqual([{ id: 'm1', name: 'Renamed', reasoningEfforts: { max: 'max' } }])
+    expect(drafts[0]?.compat.thinkingFormat).toBe('openai')
+    expect(drafts[0]?.revision).toBe(9)
+    expect(drafts[0]?.originalModels).toEqual([{ id: 'm1', name: 'Renamed', reasoningEfforts: { low: 'low' } }])
+    expect(drafts[0]?.displayName).toBe('Poke 2')
+  })
+
+  it('keeps local efforts without conflict when only revision changed', () => {
+    const current = pokeDraft()
+    current.models = [{ id: 'm1', reasoningEfforts: { max: 'max' } }]
+    const incoming = routeDraftFromUserProfile({
+      provider: 'poke',
+      displayName: 'Poke',
+      settingsPath: ['providers', 'poke'],
+      revision: 9,
+      userProfile: {
+        models: [{ id: 'm1', reasoningEfforts: { high: 'high' } }],
+        compat: { thinkingFormat: 'deepseek' },
+      },
+    })
+    const { drafts, conflicted } = mergeLoadedDrafts([current], [incoming], { preserveDirty: true })
+    expect(conflicted).toEqual([])
     expect(drafts[0]?.models).toEqual([{ id: 'm1', reasoningEfforts: { max: 'max' } }])
+    expect(drafts[0]?.compat.thinkingFormat).toBe('deepseek')
     expect(drafts[0]?.revision).toBe(9)
     expect(drafts[0]?.originalModels).toEqual([{ id: 'm1', reasoningEfforts: { high: 'high' } }])
-    expect(drafts[0]?.displayName).toBe('Poke 2')
+  })
+
+  it('takes remote membership adds while keeping local dirty efforts', () => {
+    const current = pokeDraft()
+    current.models = [{ id: 'm1', reasoningEfforts: { max: 'max' } }]
+    const incoming = routeDraftFromUserProfile({
+      provider: 'poke',
+      displayName: 'Poke',
+      settingsPath: ['providers', 'poke'],
+      revision: 9,
+      userProfile: {
+        models: [
+          { id: 'm1', reasoningEfforts: { high: 'high' } },
+          { id: 'm2', name: 'Two' },
+        ],
+        compat: { thinkingFormat: 'deepseek' },
+      },
+    })
+    const { drafts, conflicted } = mergeLoadedDrafts([current], [incoming], { preserveDirty: true })
+    expect(conflicted).toEqual([])
+    expect(drafts[0]?.models).toEqual([
+      { id: 'm1', reasoningEfforts: { max: 'max' } },
+      { id: 'm2', name: 'Two' },
+    ])
+  })
+
+  it('drops models the Models page deleted', () => {
+    const current = routeDraftFromUserProfile({
+      provider: 'poke',
+      displayName: 'Poke',
+      settingsPath: ['providers', 'poke'],
+      revision: 1,
+      userProfile: {
+        models: [
+          { id: 'm1', reasoningEfforts: { high: 'high' } },
+          { id: 'm2', name: 'Two' },
+        ],
+        compat: { thinkingFormat: 'deepseek' },
+      },
+    })
+    current.models = [
+      { id: 'm1', reasoningEfforts: { max: 'max' } },
+      { id: 'm2', name: 'Two' },
+    ]
+    const incoming = routeDraftFromUserProfile({
+      provider: 'poke',
+      displayName: 'Poke',
+      settingsPath: ['providers', 'poke'],
+      revision: 9,
+      userProfile: {
+        models: [{ id: 'm1', reasoningEfforts: { high: 'high' } }],
+        compat: { thinkingFormat: 'deepseek' },
+      },
+    })
+    const { drafts, conflicted } = mergeLoadedDrafts([current], [incoming], { preserveDirty: true })
+    expect(conflicted).toEqual([])
+    expect(drafts[0]?.models.map(row => row.id)).toEqual(['m1'])
+    expect(drafts[0]?.models[0]?.reasoningEfforts).toEqual({ max: 'max' })
+  })
+
+  it('keeps a locally cleared declaration instead of restoring remote efforts', () => {
+    const current = pokeDraft()
+    current.models = [{ id: 'm1' }]
+    const incoming = routeDraftFromUserProfile({
+      provider: 'poke',
+      displayName: 'Poke',
+      settingsPath: ['providers', 'poke'],
+      revision: 9,
+      userProfile: {
+        models: [{ id: 'm1', reasoningEfforts: { high: 'high' } }],
+        compat: { thinkingFormat: 'deepseek' },
+      },
+    })
+    const { drafts, conflicted } = mergeLoadedDrafts([current], [incoming], { preserveDirty: true })
+    expect(conflicted).toEqual([])
+    expect(drafts[0]?.models).toEqual([{ id: 'm1' }])
+    expect('reasoningEfforts' in (drafts[0]?.models[0] ?? {})).toBe(false)
+  })
+
+  it('replaces dirty cards when preserveDirty is false', () => {
+    const current = pokeDraft()
+    current.models = [{ id: 'm1', reasoningEfforts: { max: 'max' } }]
+    const incoming = routeDraftFromUserProfile({
+      provider: 'poke',
+      displayName: 'Poke',
+      settingsPath: ['providers', 'poke'],
+      revision: 9,
+      userProfile: { models: [{ id: 'm1' }] },
+    })
+    const { drafts, conflicted } = mergeLoadedDrafts([current], [incoming], { preserveDirty: false })
+    expect(conflicted).toEqual([])
+    expect(drafts[0]?.models).toEqual([{ id: 'm1' }])
+    expect(drafts[0]?.revision).toBe(9)
   })
 
   it('discards stale generation tokens', () => {
@@ -375,6 +494,52 @@ describe('applySaveSuccess / mergeLoadedDrafts / generation', () => {
       'openai',
       'deepseek',
     ])
+  })
+})
+
+describe('mergeModelsById / mergeCompat', () => {
+  it('overlays only reasoningEfforts and takes incoming name/window', () => {
+    const { models, conflicted } = mergeModelsById({
+      prevModels: [{ id: 'm1', name: 'Old', reasoningEfforts: { max: 'max' } }],
+      prevOriginal: [{ id: 'm1', name: 'Old', reasoningEfforts: { high: 'high' } }],
+      incomingModels: [{ id: 'm1', name: 'New', contextWindow: 128000, reasoningEfforts: { high: 'high' } }],
+      incomingOriginal: [{ id: 'm1', name: 'New', contextWindow: 128000, reasoningEfforts: { high: 'high' } }],
+    })
+    expect(conflicted).toBe(false)
+    expect(models).toEqual([{ id: 'm1', name: 'New', contextWindow: 128000, reasoningEfforts: { max: 'max' } }])
+  })
+
+  it('does not write false when overlaying a cleared declaration', () => {
+    const { models, conflicted } = mergeModelsById({
+      prevModels: [{ id: 'm1' }],
+      prevOriginal: [{ id: 'm1', reasoningEfforts: { high: 'high' } }],
+      incomingModels: [{ id: 'm1', reasoningEfforts: { high: 'high' } }],
+      incomingOriginal: [{ id: 'm1', reasoningEfforts: { high: 'high' } }],
+    })
+    expect(conflicted).toBe(false)
+    expect(Object.hasOwn(models[0] ?? {}, 'reasoningEfforts')).toBe(false)
+  })
+
+  it('keeps local dirty compat keys and takes remote keys the user did not touch', () => {
+    const { compat, conflicted } = mergeCompat({
+      prev: { thinkingFormat: 'openai' },
+      prevOriginal: { thinkingFormat: 'deepseek' },
+      incoming: { thinkingFormat: 'deepseek', extra: true },
+      incomingOriginal: { thinkingFormat: 'deepseek', extra: true },
+    })
+    expect(conflicted).toBe(false)
+    expect(compat).toEqual({ thinkingFormat: 'openai', extra: true })
+  })
+
+  it('reports compat conflict only when a locally dirty key also moved in originals', () => {
+    const { compat, conflicted } = mergeCompat({
+      prev: { thinkingFormat: 'openai' },
+      prevOriginal: { thinkingFormat: 'deepseek' },
+      incoming: { thinkingFormat: 'qwen' },
+      incomingOriginal: { thinkingFormat: 'qwen' },
+    })
+    expect(conflicted).toBe(true)
+    expect(compat).toEqual({ thinkingFormat: 'openai' })
   })
 })
 

@@ -22,6 +22,16 @@ export interface RouteDraft {
   compatPresent: boolean
 }
 
+/** JSON-stable equality matching pathOps (key order included). */
+export function sliceEqual(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right)
+}
+
+/** Whether two settings slices differ. */
+export function sliceChanged(before: unknown, after: unknown): boolean {
+  return !sliceEqual(before, after)
+}
+
 /** Build a draft from the stored user subtree (never from effective `value`). */
 export function routeDraftFromUserProfile(args: {
   provider: string
@@ -89,9 +99,132 @@ export function applySaveSuccess(
   })
 }
 
+function modelRowId(row: Record<string, unknown>): string {
+  return String(row.id)
+}
+
+function indexById(rows: readonly Record<string, unknown>[]): Map<string, Record<string, unknown>> {
+  const map = new Map<string, Record<string, unknown>>()
+  for (const row of rows) {
+    const id = modelRowId(row)
+    if (!map.has(id)) map.set(id, row)
+  }
+  return map
+}
+
+function effortsPresence(row: Record<string, unknown> | undefined): { present: boolean; value: unknown } {
+  if (row === undefined || !Object.hasOwn(row, 'reasoningEfforts')) {
+    return { present: false, value: undefined }
+  }
+  return { present: true, value: row.reasoningEfforts }
+}
+
+function effortsEqual(
+  left: { present: boolean; value: unknown },
+  right: { present: boolean; value: unknown },
+): boolean {
+  if (left.present !== right.present) return false
+  if (!left.present) return true
+  return sliceEqual(left.value, right.value)
+}
+
+function overlayLocalEfforts(
+  incomingRow: Record<string, unknown>,
+  prevRow: Record<string, unknown>,
+): Record<string, unknown> {
+  const next = structuredClone(incomingRow)
+  if (Object.hasOwn(prevRow, 'reasoningEfforts')) {
+    next.reasoningEfforts = structuredClone(prevRow.reasoningEfforts)
+  } else {
+    delete next.reasoningEfforts
+  }
+  return next
+}
+
+function objectKeyChanged(
+  left: Record<string, unknown>,
+  right: Record<string, unknown>,
+  key: string,
+): boolean {
+  const leftHas = Object.hasOwn(left, key)
+  const rightHas = Object.hasOwn(right, key)
+  if (leftHas !== rightHas) return true
+  if (!leftHas) return false
+  return sliceChanged(left[key], right[key])
+}
+
 /**
- * Apply a freshly loaded table. Dirty cards keep models/compat; originals and
- * revision follow the incoming snapshot so a later save is against the new user layer.
+ * Membership follows the latest user-layer models list (Models page add/delete).
+ * Local unsaved `reasoningEfforts` (including a cleared key) overlay by id.
+ */
+export function mergeModelsById(args: {
+  prevModels: readonly Record<string, unknown>[]
+  prevOriginal: readonly Record<string, unknown>[]
+  incomingModels: readonly Record<string, unknown>[]
+  incomingOriginal: readonly Record<string, unknown>[]
+}): { models: Record<string, unknown>[]; conflicted: boolean } {
+  const prevById = indexById(args.prevModels)
+  const prevOrigById = indexById(args.prevOriginal)
+  const incomingOrigById = indexById(args.incomingOriginal)
+  const incomingIds = new Set(args.incomingModels.map(modelRowId))
+  let conflicted = false
+
+  const models = args.incomingModels.map((incomingRow) => {
+    const id = modelRowId(incomingRow)
+    const prevRow = prevById.get(id)
+    if (prevRow === undefined) return structuredClone(incomingRow)
+    const prevOrig = prevOrigById.get(id)
+    const localDirty = !effortsEqual(effortsPresence(prevRow), effortsPresence(prevOrig))
+    if (!localDirty) return structuredClone(incomingRow)
+    const incomingOrig = incomingOrigById.get(id)
+    if (!effortsEqual(effortsPresence(prevOrig), effortsPresence(incomingOrig))) {
+      conflicted = true
+    }
+    return overlayLocalEfforts(incomingRow, prevRow)
+  })
+
+  for (const [id, prevRow] of prevById) {
+    if (incomingIds.has(id)) continue
+    const prevOrig = prevOrigById.get(id)
+    if (effortsEqual(effortsPresence(prevRow), effortsPresence(prevOrig))) continue
+    if (!effortsEqual(effortsPresence(prevOrig), effortsPresence(incomingOrigById.get(id)))) {
+      conflicted = true
+    }
+  }
+
+  return { models, conflicted }
+}
+
+/**
+ * Three-way compat merge: locally changed keys stay local; everything else
+ * follows incoming. Conflict only when a locally dirty key also moved in originals.
+ */
+export function mergeCompat(args: {
+  prev: Record<string, unknown>
+  prevOriginal: Record<string, unknown>
+  incoming: Record<string, unknown>
+  incomingOriginal: Record<string, unknown>
+}): { compat: Record<string, unknown>; conflicted: boolean } {
+  if (!sliceChanged(args.prev, args.prevOriginal)) {
+    return { compat: cloneObject(args.incoming), conflicted: false }
+  }
+  const compat = cloneObject(args.incoming)
+  let conflicted = false
+  const keys = new Set([...Object.keys(args.prev), ...Object.keys(args.prevOriginal)])
+  for (const key of keys) {
+    if (!objectKeyChanged(args.prev, args.prevOriginal, key)) continue
+    if (objectKeyChanged(args.prevOriginal, args.incomingOriginal, key)) conflicted = true
+    if (Object.hasOwn(args.prev, key)) compat[key] = structuredClone(args.prev[key])
+    else delete compat[key]
+  }
+  return { compat, conflicted }
+}
+
+/**
+ * Apply a freshly loaded table. Membership and metadata follow incoming;
+ * unsaved reasoningEfforts / dirty compat keys overlay by id. Conflict only
+ * when a locally dirty field also changed in originals (revision-only bumps
+ * and sibling-card saves do not warn).
  */
 export function mergeLoadedDrafts(
   current: readonly RouteDraft[],
@@ -103,13 +236,27 @@ export function mergeLoadedDrafts(
   const drafts = incoming.map((next) => {
     const prev = currentByProvider.get(next.provider)
     if (prev === undefined || !options.preserveDirty || !draftDirty(prev)) return next
-    conflicted.push(next.provider)
+    const modelsMerge = mergeModelsById({
+      prevModels: prev.models,
+      prevOriginal: prev.originalModels,
+      incomingModels: next.models,
+      incomingOriginal: next.originalModels,
+    })
+    const compatMerge = mergeCompat({
+      prev: prev.compat,
+      prevOriginal: prev.originalCompat,
+      incoming: next.compat,
+      incomingOriginal: next.originalCompat,
+    })
+    if (modelsMerge.conflicted || compatMerge.conflicted) conflicted.push(next.provider)
     return {
-      ...prev,
+      provider: next.provider,
       displayName: next.displayName,
       settingsPath: next.settingsPath,
       revision: next.revision,
+      models: modelsMerge.models,
       originalModels: cloneModels(next.originalModels),
+      compat: compatMerge.compat,
       originalCompat: cloneObject(next.originalCompat),
       compatPresent: next.compatPresent,
     }

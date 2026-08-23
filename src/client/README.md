@@ -17,8 +17,8 @@
 
 | 文件 | 说明 |
 | --- | --- |
-| [`index.ts`](./index.ts) | 注册 zh/en 文案、CSS（`ctx.effect` 插入/移除）与 `settings.section`（id `effort-declare`，order 12）。在 `apply` 里订阅镜像 `describe.subscribe`、`settings/document-updated`（仅 `llm-pi-ai`）、`llm/adapters-updated`、`connection/reset`。`locale: NS` 由框架注入 `t`，inject 只传 `api` / `describe` / `schema` / `subscribeInvalidate`。 |
-| [`EffortDeclareSection.tsx`](./EffortDeclareSection.tsx) | 路由卡片、预设、Off 三态、高级协议开关、保存与取消。 |
+| [`index.ts`](./index.ts) | 注册 zh/en 文案、CSS（`ctx.effect` 插入/移除）与 `settings.section`（id `effort-declare`，order 12）。`describe.subscribe` 只同步 `writable`（任意 namespace 都会触发，含自己的 `acceptView`）。真正重载来自 `settings/document-updated`（仅 `llm-pi-ai`）、`llm/adapters-updated`、`connection/reset`。`locale: NS` 由框架注入 `t`，inject 只传 `api` / `describe` / `schema` / `subscribeInvalidate`。 |
+| [`EffortDeclareSection.tsx`](./EffortDeclareSection.tsx) | 路由卡片、预设、Off 三态、高级协议开关、保存与取消。保存互斥到整个 `llm-pi-ai` namespace；`busy` 只给正在 mutate 的卡显示「保存中」，其它卡 `saveLocked`。自己写入成功走 `acceptView` + `applySaveSuccess`，不再全量 reload。 |
 | [`load-drafts.ts`](./load-drafts.ts) | 从 `llm.providers` + 镜像组装草稿；草稿取自 `user`，协议分类可用 `value`。`thinkingFormat` 可选项只来自现场 schema union。 |
 | [`locales.ts`](./locales.ts) | 文案 namespace `plugin-effort-declare`。 |
 | [`effort-declare.module.css`](./effort-declare.module.css) | 仅使用 `--dsw-alias-*` 设计令牌，保证暗色主题正确。 |

@@ -13,6 +13,10 @@ export interface RouteDraft {
     /** Whether `compat` is present on the user profile (not the effective view). */
     compatPresent: boolean;
 }
+/** JSON-stable equality matching pathOps (key order included). */
+export declare function sliceEqual(left: unknown, right: unknown): boolean;
+/** Whether two settings slices differ. */
+export declare function sliceChanged(before: unknown, after: unknown): boolean;
 /** Build a draft from the stored user subtree (never from effective `value`). */
 export declare function routeDraftFromUserProfile(args: {
     provider: string;
@@ -31,8 +35,36 @@ export declare function applySaveSuccess(drafts: readonly RouteDraft[], savedPro
     revision: number;
 }): RouteDraft[];
 /**
- * Apply a freshly loaded table. Dirty cards keep models/compat; originals and
- * revision follow the incoming snapshot so a later save is against the new user layer.
+ * Membership follows the latest user-layer models list (Models page add/delete).
+ * Local unsaved `reasoningEfforts` (including a cleared key) overlay by id.
+ */
+export declare function mergeModelsById(args: {
+    prevModels: readonly Record<string, unknown>[];
+    prevOriginal: readonly Record<string, unknown>[];
+    incomingModels: readonly Record<string, unknown>[];
+    incomingOriginal: readonly Record<string, unknown>[];
+}): {
+    models: Record<string, unknown>[];
+    conflicted: boolean;
+};
+/**
+ * Three-way compat merge: locally changed keys stay local; everything else
+ * follows incoming. Conflict only when a locally dirty key also moved in originals.
+ */
+export declare function mergeCompat(args: {
+    prev: Record<string, unknown>;
+    prevOriginal: Record<string, unknown>;
+    incoming: Record<string, unknown>;
+    incomingOriginal: Record<string, unknown>;
+}): {
+    compat: Record<string, unknown>;
+    conflicted: boolean;
+};
+/**
+ * Apply a freshly loaded table. Membership and metadata follow incoming;
+ * unsaved reasoningEfforts / dirty compat keys overlay by id. Conflict only
+ * when a locally dirty field also changed in originals (revision-only bumps
+ * and sibling-card saves do not warn).
  */
 export declare function mergeLoadedDrafts(current: readonly RouteDraft[], incoming: readonly RouteDraft[], options: {
     preserveDirty: boolean;

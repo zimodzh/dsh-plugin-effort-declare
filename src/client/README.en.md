@@ -17,8 +17,8 @@ Cross-plugin work uses Cordis services only (`connection`, `settingsScope`, `set
 
 | File | Role |
 | --- | --- |
-| [`index.ts`](./index.ts) | Registers zh/en copy, CSS (`ctx.effect` insert/remove), and `settings.section` (id `effort-declare`, order 12). Subscribes in `apply` to the mirror `describe.subscribe`, `settings/document-updated` (`llm-pi-ai` only), `llm/adapters-updated`, and `connection/reset`. `locale: NS` lets the framework inject `t`; `inject` only returns `api` / `describe` / `schema` / `subscribeInvalidate`. |
-| [`EffortDeclareSection.tsx`](./EffortDeclareSection.tsx) | Route cards, presets, Off tri-state, advanced protocol switches, save and cancel. |
+| [`index.ts`](./index.ts) | Registers zh/en copy, CSS (`ctx.effect` insert/remove), and `settings.section` (id `effort-declare`, order 12). `describe.subscribe` only syncs `writable` (it fires for every namespace, including this page’s own `acceptView`). Full reloads come from `settings/document-updated` (`llm-pi-ai` only), `llm/adapters-updated`, and `connection/reset`. `locale: NS` lets the framework inject `t`; `inject` only returns `api` / `describe` / `schema` / `subscribeInvalidate`. |
+| [`EffortDeclareSection.tsx`](./EffortDeclareSection.tsx) | Route cards, presets, Off tri-state, advanced protocol switches, save and cancel. Save is exclusive for the whole `llm-pi-ai` namespace; `busy` is “Saving…” on the in-flight card, `saveLocked` disables the others. A successful write folds `acceptView` + `applySaveSuccess` and does not full-reload. |
 | [`load-drafts.ts`](./load-drafts.ts) | Builds drafts from `llm.providers` + the settings mirror; drafts come from `user`, protocol classification may use `value`. `thinkingFormat` choices come only from the live schema union. |
 | [`locales.ts`](./locales.ts) | Copy namespace `plugin-effort-declare`. |
 | [`effort-declare.module.css`](./effort-declare.module.css) | `--dsw-alias-*` tokens only, so dark theme stays correct. |

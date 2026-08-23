@@ -7,7 +7,7 @@ import type { IApiClient } from '@deepseek-ai/dsh-api-remotes/client';
 import type { SettingsDescribeFace } from '@deepseek-ai/dsh-client-ui-settings/client';
 import { type SchemaOps } from './schema-ops.ts';
 import type { EffortDeclareKey } from './locales.ts';
-export type InvalidationSource = 'settings' | 'directory';
+export type InvalidationSource = 'settings' | 'directory' | 'writable';
 export interface EffortDeclareSectionInjected {
     api: Pick<IApiClient, 'settings' | 'llm'>;
     describe: SettingsDescribeFace;

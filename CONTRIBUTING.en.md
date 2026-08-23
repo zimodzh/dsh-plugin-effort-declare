@@ -17,6 +17,8 @@ Write `llm-pi-ai` settings only:
 - No fork of the official Models page
 - No parallel effort table
 - No per-model `reasoningEfforts` in the bundle layer (settings dict merge has no delete semantics)
+- Do not auto-write efforts onto undeclared models at Host start (dict merge cannot delete; it would mutate models the user never saved)
+- Do not hook `agent/request` to fill a default effort for subagents
 - Do not set route-level `reasoning` to `high`
 
 Any new model-visible input must land in a session-log-rebuildable mechanism. This plugin does not inject prompt text.
@@ -38,7 +40,7 @@ pnpm build
 
 Before sending a change, say whether it is a bugfix, UI improvement, or an alignment with a newer DSH / pi-ai schema. Update zh and en docs together. The root README and [INSTALL.en.md](./INSTALL.en.md) are for users; this file and the READMEs under `src/` and `tests/` are for people changing code.
 
-Canonical level names and `thinkingFormat` enums come from the installed `llm-pi-ai` schema / catalog. The repo keeps a whitelist pinned by tests; if the schema drifts, update the tests first, then UI copy. Do not offer that list as writable dropdown choices.
+Canonical level names and `thinkingFormat` enums come from the installed `llm-pi-ai` schema / catalog. The live `thinkingFormat` schema contract is [`tests/fixtures/pi-ai-thinking-format-union.ts`](./tests/fixtures/pi-ai-thinking-format-union.ts). When upgrading DSH, refresh that fixture from `dsh --dump-config` or the settings describe schema, then update `src/core/catalog.ts` and UI copy. Do not value-import `@deepseek-ai/dsh-llm-pi-ai` into the client bundle. Effort keys stay a locally pinned whitelist; if the schema drifts, change the fixture / tests first. Do not offer that list as writable dropdown choices.
 
 ## Publishing to npm
 

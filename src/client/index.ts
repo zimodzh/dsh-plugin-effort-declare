@@ -66,8 +66,11 @@ export function apply(ctx: ClientContext): void {
     const emit = (source: InvalidationSource) => {
       for (const listener of invalidation) listener(source)
     }
+    // Mirror subscribe fires on every namespace (theme, locale, own acceptView).
+    // Only fold writable from that; llm-pi-ai document changes come from the
+    // Host event below so a dirty card is not treated as a conflict.
     const disposers = [
-      describe.subscribe(() => { emit('settings') }),
+      describe.subscribe(() => { emit('writable') }),
       ctx.remote.$on('settings/document-updated', (ns: string) => {
         if (ns !== LLM_PI_AI_NS) return
         emit('settings')

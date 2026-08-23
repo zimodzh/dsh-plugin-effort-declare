@@ -17,6 +17,8 @@
 - 不要 fork 官方模型页
 - 不要平行再存一份档位表
 - 不要在 bundle 层预置 per-model `reasoningEfforts`（settings 字典合并没有删除语义）
+- 不要在 Host 启动时给未声明的模型自动写入档位（字典合并删不掉，会改用户没保存过的模型）
+- 不要挂 `agent/request` 给 subagent 填默认档
 - 不要把路由级 `reasoning` 写成 `high`
 
 新增任何模型可见输入，必须走会话日志可重建的机制。本插件不向模型注入提示词。
@@ -38,7 +40,7 @@ pnpm build
 
 提交前请说明改动是修 bug、增强 UI，还是对齐新的 DSH / pi-ai schema。中英文档一起改。根 README 和 [INSTALL.md](./INSTALL.md) 面向使用者；本文件与 `src/`、`tests/` 的 README 面向改代码的人。
 
-上游档位名与 `thinkingFormat` 枚举以 DSH 安装里 `llm-pi-ai` 的 schema / catalog 为准。仓库内有一份测试钉白名单；schema 漂移时应先改测试再改 UI 文案。不要把这份名单当作可写入下拉选项。
+上游档位名与 `thinkingFormat` 枚举以 DSH 安装里 `llm-pi-ai` 的 schema / catalog 为准。`thinkingFormat` 的现场 schema 契约在 [`tests/fixtures/pi-ai-thinking-format-union.ts`](./tests/fixtures/pi-ai-thinking-format-union.ts)。升 DSH 时用 `dsh --dump-config` 或设置 describe 的 schema 更新该 fixture，再改 `src/core/catalog.ts` 与 UI。不要把 `@deepseek-ai/dsh-llm-pi-ai` 打进 client bundle。档位键仍由测试钉本地白名单；schema 漂移时应先改 fixture / 测试再改 UI。不要把这份名单当作可写入下拉选项。
 
 ## 发布到 npm
 

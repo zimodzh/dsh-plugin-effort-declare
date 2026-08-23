@@ -17,7 +17,7 @@
 
 Add reasoning-effort options to OpenAI-compatible models you added yourself, so the Effort row shows up in the composer.
 
-> This is a community-maintained third-party plugin. It is not an official DeepSeek project and is not endorsed by DeepSeek. Requires DeepSeek Harness **0.1.0-rc.8 or later**.
+> This is a community-maintained third-party plugin. It is not an official DeepSeek project and is not endorsed by DeepSeek. Requires **DeepSeek Harness 0.1.0-rc.8** or later. Versions before **DeepSeek Harness 0.1.0-rc.8** have not been tested and are not guaranteed to work.
 
 ## Why
 

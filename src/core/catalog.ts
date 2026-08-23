@@ -3,9 +3,11 @@
  *
  * Levels match `@deepseek-ai/dsh-llm-pi-ai` catalog.ts `THINKING_LEVELS`.
  * Formats match `SUPPORTED_THINKING_FORMATS` in the same file (rc.8).
- * Tests pin these lists against llm-pi-ai. The settings page never offers
- * the handwritten thinkingFormat list as writable choices — only the live
- * schema union, plus a stored value that the union omitted.
+ * Tests pin these lists against a checked-in schema fixture
+ * (`tests/fixtures/pi-ai-thinking-format-union.ts`) and the local level
+ * whitelist. The settings page never offers the handwritten thinkingFormat
+ * list as writable choices — only the live schema union, plus a stored
+ * value that the union omitted.
  */
 
 /** Selectable reasoning levels, in pi-ai escalation order. */

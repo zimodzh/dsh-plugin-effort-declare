@@ -13,6 +13,7 @@ export type EffortDeclareKey =
   | 'readOnly'
   | 'save'
   | 'saving'
+  | 'saveBusy'
   | 'cancel'
   | 'saved'
   | 'conflict'
@@ -57,6 +58,7 @@ export const zh: Record<EffortDeclareKey, string> = {
   readOnly: '当前设置为只读，无法保存。',
   save: '保存',
   saving: '保存中…',
+  saveBusy: '另有路由正在保存，请稍候。',
   cancel: '取消',
   saved: '已保存。对话选择器会按新的能力声明显示 Effort 行。',
   conflict: '设置已被其他地方改过，请重新加载后再保存。',
@@ -100,6 +102,7 @@ export const en: Record<EffortDeclareKey, string> = {
   readOnly: 'Settings are read-only; saving is disabled.',
   save: 'Save',
   saving: 'Saving…',
+  saveBusy: 'Another route is saving. Wait, then save this card.',
   cancel: 'Cancel',
   saved: 'Saved. The composer Effort row follows this capability declaration.',
   conflict: 'Settings changed elsewhere. Reload, then save again.',

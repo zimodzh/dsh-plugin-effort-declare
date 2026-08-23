@@ -35,7 +35,7 @@ import { validateSaveDraft, type SchemaOps } from './schema-ops.ts'
 import type { EffortDeclareKey } from './locales.ts'
 import css from './effort-declare.module.css'
 
-export type InvalidationSource = 'settings' | 'directory'
+export type InvalidationSource = 'settings' | 'directory' | 'writable'
 
 export interface EffortDeclareSectionInjected {
   api: Pick<IApiClient, 'settings' | 'llm'>
@@ -165,18 +165,20 @@ function RouteCard(props: {
   draft: RouteDraft
   formats: readonly string[]
   writable: boolean
+  /** This card is the in-flight mutate — show “Saving…”. */
   busy: boolean
-  reloading: boolean
+  /** Namespace-level lock: any mutate, read-only, or first load. */
+  saveLocked: boolean
   notice: CardNotice | undefined
   t: (key: EffortDeclareKey) => string
   onChange: (draft: RouteDraft) => void
   onSave: (draft: RouteDraft) => void
   onCancel: (draft: RouteDraft) => void
 }): ReactNode {
-  const { draft, writable, busy, reloading, t, onChange } = props
+  const { draft, writable, busy, saveLocked, t, onChange } = props
   const noModels = draft.models.length === 0
   const editDisabled = !writable || busy || noModels
-  const saveLocked = editDisabled || reloading
+  const saveDisabled = saveLocked || noModels
   const formats = thinkingFormatChoices(props.formats, draft.compat.thinkingFormat)
   const summary = compatSummary(draft.compat)
   const sameWire = draft.compat.supportsReasoningEffort === false
@@ -302,7 +304,7 @@ function RouteCard(props: {
         <button
           type="button"
           className={css.primaryButton}
-          disabled={saveLocked || !dirty || clientError !== undefined}
+          disabled={saveDisabled || !dirty || clientError !== undefined}
           onClick={() => { props.onSave(draft) }}
         >
           {busy ? t('saving') : t('save')}
@@ -335,7 +337,7 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
       return
     }
     const generation = nextGeneration(generationRef)
-    setStatus('loading')
+    if (draftsRef.current.length === 0) setStatus('loading')
     setError('')
     void loadDrafts(api, describe, schema).then((result) => {
       if (!generationIsCurrent(generationRef, generation)) return
@@ -370,9 +372,14 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
   useEffect(() => {
     if (props.subscribeInvalidate === undefined) return undefined
     return props.subscribeInvalidate((source) => {
+      if (source === 'writable') {
+        const view = describe?.getSnapshot().view
+        if (view !== undefined) setWritable(view.writable)
+        return
+      }
       if (source === 'settings' || source === 'directory') reload(true)
     })
-  }, [props.subscribeInvalidate, reload])
+  }, [describe, props.subscribeInvalidate, reload])
 
   const patchNotice = (provider: string, notice: CardNotice | undefined): void => {
     setNotices(current => {
@@ -385,7 +392,10 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
 
   const save = async (draft: RouteDraft): Promise<void> => {
     if (api === undefined || describe === undefined || schema === undefined) return
-    if (status === 'loading' || busyRoute !== null) return
+    if (status === 'loading' || busyRoute !== null) {
+      patchNotice(draft.provider, { kind: 'error', text: t('saveBusy') })
+      return
+    }
     const blocking = draft.models
       .map(row => errorText(modelEffortError(row), t))
       .find(text => text !== undefined)
@@ -502,7 +512,7 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
                 formats={formats.length > 0 ? formats : []}
                 writable={writable}
                 busy={busyRoute === draft.provider}
-                reloading={status === 'loading'}
+                saveLocked={!writable || busyRoute !== null || status === 'loading'}
                 notice={notices[draft.provider]}
                 t={t}
                 onChange={(next) => {
