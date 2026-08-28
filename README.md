@@ -13,6 +13,8 @@
   <a href="https://github.com/zimodzh/dsh-plugin-effort-declare" target="_blank" rel="noopener noreferrer"><img alt="repo size" src="https://img.shields.io/github/repo-size/zimodzh/dsh-plugin-effort-declare"></a>
   <a href="./LICENSE" target="_blank" rel="noopener noreferrer"><img alt="license" src="https://img.shields.io/github/license/zimodzh/dsh-plugin-effort-declare"></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness" target="_blank" rel="noopener noreferrer"><img alt="Agent" src="https://img.shields.io/badge/Agent-Deepseek%20Harness-000000"></a>
+  <a href="https://www.dsh.so/artifact/dsh-plugin-effort-declare/" target="_blank" rel="noopener noreferrer"><img alt="dsh.so risk" src="https://www.dsh.so/badge/dsh-plugin-effort-declare.svg"></a>
+  <a href="https://www.dsh.so/artifact/dsh-plugin-effort-declare/" target="_blank" rel="noopener noreferrer"><img alt="dsh.so install" src="https://www.dsh.so/badge/install/dsh-plugin-effort-declare.svg"></a>
 </p>
 
 这是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）的设置插件：为手工添加的 OpenAI 兼容模型声明推理档位与图片输入。声明之后，对话输入框才会出现 Effort 行，并允许附加图片；未声明则按纯文本模型处理。

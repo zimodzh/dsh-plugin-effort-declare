@@ -13,6 +13,8 @@
   <a href="https://github.com/zimodzh/dsh-plugin-effort-declare" target="_blank" rel="noopener noreferrer"><img alt="repo size" src="https://img.shields.io/github/repo-size/zimodzh/dsh-plugin-effort-declare"></a>
   <a href="./LICENSE" target="_blank" rel="noopener noreferrer"><img alt="license" src="https://img.shields.io/github/license/zimodzh/dsh-plugin-effort-declare"></a>
   <a href="https://github.com/deepseek-ai/deepseek-harness" target="_blank" rel="noopener noreferrer"><img alt="Agent" src="https://img.shields.io/badge/Agent-Deepseek%20Harness-000000"></a>
+  <a href="https://www.dsh.so/artifact/dsh-plugin-effort-declare/" target="_blank" rel="noopener noreferrer"><img alt="dsh.so risk" src="https://www.dsh.so/badge/dsh-plugin-effort-declare.svg"></a>
+  <a href="https://www.dsh.so/artifact/dsh-plugin-effort-declare/" target="_blank" rel="noopener noreferrer"><img alt="dsh.so install" src="https://www.dsh.so/badge/install/dsh-plugin-effort-declare.svg"></a>
 </p>
 
 A settings plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH). It declares reasoning levels and image input for hand-added OpenAI-compatible models. After a declaration, the composer shows the Effort row and accepts image attachments; undeclared models are treated as text-only.
