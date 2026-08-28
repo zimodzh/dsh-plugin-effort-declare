@@ -30,4 +30,12 @@ export declare const LLM_DEEPSEEK_NS = "llm-deepseek";
 export declare const DEEPSEEK_OFFICIAL = "deepseek-official";
 /** Any route key walks a dict schema to the same profile node. */
 export declare const SCHEMA_PROBE_ROUTE = "\0probe";
+/** Request modalities llm-pi-ai accepts on `models[].input` / `defaultInput`. */
+export declare const INPUT_MODALITIES: readonly ["text", "image"];
+export type InputModality = (typeof INPUT_MODALITIES)[number];
+/**
+ * Canonical write for a hand-declared vision model.
+ * Must include `text`; image-only is not a serviceable OpenAI-completions route.
+ */
+export declare const IMAGE_CAPABLE_INPUT: readonly InputModality[];
 //# sourceMappingURL=catalog.d.ts.map

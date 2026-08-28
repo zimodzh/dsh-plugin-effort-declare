@@ -112,31 +112,42 @@ function indexById(rows: readonly Record<string, unknown>[]): Map<string, Record
   return map
 }
 
-function effortsPresence(row: Record<string, unknown> | undefined): { present: boolean; value: unknown } {
-  if (row === undefined || !Object.hasOwn(row, 'reasoningEfforts')) {
+/** Model-row fields this page edits; other keys follow the Models page. */
+export const MODEL_OVERLAY_KEYS = ['reasoningEfforts', 'input'] as const
+
+export type ModelOverlayKey = (typeof MODEL_OVERLAY_KEYS)[number]
+
+function fieldPresence(
+  row: Record<string, unknown> | undefined,
+  key: ModelOverlayKey,
+): { present: boolean; value: unknown } {
+  if (row === undefined || !Object.hasOwn(row, key)) {
     return { present: false, value: undefined }
   }
-  return { present: true, value: row.reasoningEfforts }
+  return { present: true, value: row[key] }
 }
 
-function effortsEqual(
-  left: { present: boolean; value: unknown },
-  right: { present: boolean; value: unknown },
+function fieldEqual(
+  left: Record<string, unknown> | undefined,
+  right: Record<string, unknown> | undefined,
+  key: ModelOverlayKey,
 ): boolean {
-  if (left.present !== right.present) return false
-  if (!left.present) return true
-  return sliceEqual(left.value, right.value)
+  const a = fieldPresence(left, key)
+  const b = fieldPresence(right, key)
+  if (a.present !== b.present) return false
+  if (!a.present) return true
+  return sliceEqual(a.value, b.value)
 }
 
-function overlayLocalEfforts(
+function overlayLocalFields(
   incomingRow: Record<string, unknown>,
   prevRow: Record<string, unknown>,
+  keys: readonly ModelOverlayKey[],
 ): Record<string, unknown> {
   const next = structuredClone(incomingRow)
-  if (Object.hasOwn(prevRow, 'reasoningEfforts')) {
-    next.reasoningEfforts = structuredClone(prevRow.reasoningEfforts)
-  } else {
-    delete next.reasoningEfforts
+  for (const key of keys) {
+    if (Object.hasOwn(prevRow, key)) next[key] = structuredClone(prevRow[key])
+    else delete next[key]
   }
   return next
 }
@@ -155,7 +166,8 @@ function objectKeyChanged(
 
 /**
  * Membership follows the latest user-layer models list (Models page add/delete).
- * Local unsaved `reasoningEfforts` (including a cleared key) overlay by id.
+ * Local unsaved overlay keys (including a cleared key) overlay by id; other
+ * fields on the row follow incoming.
  */
 export function mergeModelsById(args: {
   prevModels: readonly Record<string, unknown>[]
@@ -174,21 +186,23 @@ export function mergeModelsById(args: {
     const prevRow = prevById.get(id)
     if (prevRow === undefined) return structuredClone(incomingRow)
     const prevOrig = prevOrigById.get(id)
-    const localDirty = !effortsEqual(effortsPresence(prevRow), effortsPresence(prevOrig))
-    if (!localDirty) return structuredClone(incomingRow)
+    const dirtyKeys = MODEL_OVERLAY_KEYS.filter(key => !fieldEqual(prevRow, prevOrig, key))
+    if (dirtyKeys.length === 0) return structuredClone(incomingRow)
     const incomingOrig = incomingOrigById.get(id)
-    if (!effortsEqual(effortsPresence(prevOrig), effortsPresence(incomingOrig))) {
-      conflicted = true
+    for (const key of dirtyKeys) {
+      if (!fieldEqual(prevOrig, incomingOrig, key)) conflicted = true
     }
-    return overlayLocalEfforts(incomingRow, prevRow)
+    return overlayLocalFields(incomingRow, prevRow, dirtyKeys)
   })
 
   for (const [id, prevRow] of prevById) {
     if (incomingIds.has(id)) continue
     const prevOrig = prevOrigById.get(id)
-    if (effortsEqual(effortsPresence(prevRow), effortsPresence(prevOrig))) continue
-    if (!effortsEqual(effortsPresence(prevOrig), effortsPresence(incomingOrigById.get(id)))) {
-      conflicted = true
+    const dirtyKeys = MODEL_OVERLAY_KEYS.filter(key => !fieldEqual(prevRow, prevOrig, key))
+    if (dirtyKeys.length === 0) continue
+    const incomingOrig = incomingOrigById.get(id)
+    for (const key of dirtyKeys) {
+      if (!fieldEqual(prevOrig, incomingOrig, key)) conflicted = true
     }
   }
 
@@ -222,9 +236,9 @@ export function mergeCompat(args: {
 
 /**
  * Apply a freshly loaded table. Membership and metadata follow incoming;
- * unsaved reasoningEfforts / dirty compat keys overlay by id. Conflict only
- * when a locally dirty field also changed in originals (revision-only bumps
- * and sibling-card saves do not warn).
+ * unsaved overlay keys (`reasoningEfforts`, `input`) / dirty compat keys
+ * overlay by id. Conflict only when a locally dirty field also changed in
+ * originals (revision-only bumps and sibling-card saves do not warn).
  */
 export function mergeLoadedDrafts(
   current: readonly RouteDraft[],

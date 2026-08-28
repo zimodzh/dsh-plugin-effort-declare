@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FALLBACK_THINKING_FORMATS, THINKING_LEVELS } from '../src/core/catalog.ts'
+import { FALLBACK_THINKING_FORMATS, IMAGE_CAPABLE_INPUT, INPUT_MODALITIES, THINKING_LEVELS } from '../src/core/catalog.ts'
 import {
   clearReasoningEfforts,
   readOff,
@@ -41,6 +41,8 @@ import {
   TOGGLE_PRESET,
 } from '../src/core/presets.ts'
 import { COPYRIGHT_FROM, COPYRIGHT_HOLDER, formatAttribution } from '../src/core/attribution.ts'
+import { readImageCapable, validateInput, writeImageCapable } from '../src/core/input.ts'
+import { modelRowError } from '../src/core/validate.ts'
 
 describe('catalog pin', () => {
   it('pins thinking levels to the llm-pi-ai rc.8 / rc.2 set', () => {
@@ -69,6 +71,11 @@ describe('catalog pin', () => {
       list: FALLBACK_THINKING_FORMATS.map(value => ({ value })),
     }
     expect(unionStringChoices(node)).toEqual([...FALLBACK_THINKING_FORMATS])
+  })
+
+  it('pins request modalities to llm-pi-ai text/image', () => {
+    expect([...INPUT_MODALITIES]).toEqual(['text', 'image'])
+    expect([...IMAGE_CAPABLE_INPUT]).toEqual(['text', 'image'])
   })
 })
 
@@ -188,6 +195,45 @@ describe('clear declaration', () => {
     const row = writeEfforts({ id: 'x', reasoningEfforts: { high: 'high' } }, undefined)
     expect(row).toEqual({ id: 'x' })
   })
+
+  it('clearing efforts leaves a vision declaration in place', () => {
+    const cleared = clearReasoningEfforts({
+      id: 'vision',
+      reasoningEfforts: { high: 'high' },
+      input: ['text', 'image'],
+    })
+    expect(cleared).toEqual({ id: 'vision', input: ['text', 'image'] })
+  })
+})
+
+describe('image input declaration', () => {
+  it('writes [text, image] and unsets the key instead of []', () => {
+    const on = writeImageCapable({ id: 'm1', name: 'V' }, true)
+    expect(on).toEqual({ id: 'm1', name: 'V', input: ['text', 'image'] })
+    expect(readImageCapable(on)).toBe(true)
+    const off = writeImageCapable(on, false)
+    expect(off).toEqual({ id: 'm1', name: 'V' })
+    expect('input' in off).toBe(false)
+    expect(readImageCapable(off)).toBe(false)
+  })
+
+  it('treats absence and text-only as not image-capable', () => {
+    expect(readImageCapable({ id: 'm1' })).toBe(false)
+    expect(readImageCapable({ id: 'm1', input: ['text'] })).toBe(false)
+    expect(readImageCapable({ id: 'm1', input: ['text', 'image'] })).toBe(true)
+  })
+
+  it('rejects empty, image-only, duplicates, and unknown modalities', () => {
+    expect(validateInput(undefined)).toBeUndefined()
+    expect(validateInput(['text'])).toBeUndefined()
+    expect(validateInput(['text', 'image'])).toBeUndefined()
+    expect(validateInput([])).toBe('bad-input')
+    expect(validateInput(['image'])).toBe('bad-input')
+    expect(validateInput(['text', 'text'])).toBe('bad-input')
+    expect(validateInput(['text', 'audio'])).toBe('bad-input')
+    expect(modelRowError({ input: ['image'] })).toBe('bad-input')
+    expect(modelRowError({ reasoningEfforts: { high: 'high' }, input: ['text', 'image'] })).toBeUndefined()
+  })
 })
 
 describe('path ops', () => {
@@ -229,6 +275,20 @@ describe('path ops', () => {
     )
     expect(ops).toEqual([
       { op: 'unset', path: ['providers', 'poke', 'compat', 'thinkingFormat'] },
+    ])
+  })
+
+  it('sets models when only input changed', () => {
+    const before = [{ id: 'm1', name: 'V' }]
+    const after = [{ id: 'm1', name: 'V', input: ['text', 'image'] }]
+    expect(buildSaveOps({
+      settingsPath: ['providers', 'poke'],
+      beforeModels: before,
+      afterModels: after,
+      beforeCompat: undefined,
+      afterCompat: undefined,
+    })).toEqual([
+      { op: 'set', path: ['providers', 'poke', 'models'], value: after },
     ])
   })
 })
@@ -527,6 +587,44 @@ describe('mergeModelsById / mergeCompat', () => {
     })
     expect(conflicted).toBe(false)
     expect(Object.hasOwn(models[0] ?? {}, 'reasoningEfforts')).toBe(false)
+  })
+
+  it('overlays only input and takes incoming efforts', () => {
+    const { models, conflicted } = mergeModelsById({
+      prevModels: [{ id: 'm1', reasoningEfforts: { high: 'high' }, input: ['text', 'image'] }],
+      prevOriginal: [{ id: 'm1', reasoningEfforts: { high: 'high' } }],
+      incomingModels: [{ id: 'm1', name: 'New', reasoningEfforts: { max: 'max' } }],
+      incomingOriginal: [{ id: 'm1', name: 'New', reasoningEfforts: { max: 'max' } }],
+    })
+    expect(conflicted).toBe(false)
+    expect(models).toEqual([{
+      id: 'm1',
+      name: 'New',
+      reasoningEfforts: { max: 'max' },
+      input: ['text', 'image'],
+    }])
+  })
+
+  it('keeps a locally cleared input instead of restoring remote vision', () => {
+    const { models, conflicted } = mergeModelsById({
+      prevModels: [{ id: 'm1' }],
+      prevOriginal: [{ id: 'm1', input: ['text', 'image'] }],
+      incomingModels: [{ id: 'm1', input: ['text', 'image'] }],
+      incomingOriginal: [{ id: 'm1', input: ['text', 'image'] }],
+    })
+    expect(conflicted).toBe(false)
+    expect(Object.hasOwn(models[0] ?? {}, 'input')).toBe(false)
+  })
+
+  it('reports input conflict when a locally dirty input also moved in originals', () => {
+    const { models, conflicted } = mergeModelsById({
+      prevModels: [{ id: 'm1', input: ['text', 'image'] }],
+      prevOriginal: [{ id: 'm1' }],
+      incomingModels: [{ id: 'm1', input: ['text'] }],
+      incomingOriginal: [{ id: 'm1', input: ['text'] }],
+    })
+    expect(conflicted).toBe(true)
+    expect(models).toEqual([{ id: 'm1', input: ['text', 'image'] }])
   })
 
   it('keeps local dirty compat keys and takes remote keys the user did not touch', () => {

@@ -15,26 +15,28 @@
   <a href="https://github.com/deepseek-ai/deepseek-harness" target="_blank" rel="noopener noreferrer"><img alt="Agent" src="https://img.shields.io/badge/Agent-Deepseek%20Harness-000000"></a>
 </p>
 
-Add reasoning-effort options to OpenAI-compatible models you added yourself, so the Effort row shows up in the composer.
+A settings plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH). It declares reasoning levels and image input for hand-added OpenAI-compatible models. After a declaration, the composer shows the Effort row and accepts image attachments; undeclared models are treated as text-only.
 
-> This is a community-maintained third-party plugin. It is not an official DeepSeek project and is not endorsed by DeepSeek. Requires **DeepSeek Harness 0.1.0-rc.8** or later. Versions before **DeepSeek Harness 0.1.0-rc.8** have not been tested and are not guaranteed to work.
+> A community-maintained third-party DSH plugin. It is not an official DeepSeek project and is not endorsed by DeepSeek. Requires **DeepSeek Harness 0.1.0-rc.8** or later. Earlier versions have not been tested.
 
-## Why
+## Purpose
 
-Hand-added third-party providers on the Models page need a reasoning-level declaration before Effort appears in the composer. They usually do not declare it. This plugin therefore adds a **Reasoning efforts** page in Settings: you pick which levels a model can offer. The per-turn choice and the HTTP request still go through DSH. This plugin only writes settings, not API keys.
+Hand-added third-party providers on the Models page typically omit `reasoningEfforts` and `input`. DeepSeek Harness uses those fields to decide whether the Effort picker appears and whether image attachments are admitted. This plugin adds a **Reasoning efforts** page in Settings and writes both capabilities into the official `llm-pi-ai` namespace. The per-turn level and the HTTP request still go through Harness. This plugin does not change API keys, endpoints, or the model list.
 
-- Does not change models you have not saved
+- Does not rewrite models the user has not saved
 - Does not change the current or default effort
 - Does not replace the official Models page
+- Does not intercept model streams or replace adapters
 
 ## Features
 
-| Feature | What it does |
+| Feature | Description |
 | --- | --- |
-| Reasoning efforts page | Choose levels per model; change the gateway spelling if it differs |
-| Presets | DeepSeek compatible, OpenAI compatible, or on/off only. A preset **replaces** that dialect; it does not stack |
-| vs Models | Models owns the endpoint, keys, and model list; this page only declares which reasoning levels are offered |
-| Version footer | Bottom of the page shows the plugin version and copyright years (frozen at pack time; opening DSH does not advance the year) |
+| Reasoning levels | Choose offered levels per model; override the on-the-wire spelling when the gateway differs |
+| Image input | Declare whether a model accepts images. Checking writes `input: ['text', 'image']`; unchecking deletes the key and does not write an empty list |
+| Presets | DeepSeek-compatible, OpenAI-compatible, or on/off only. A preset replaces the current dialect; it does not stack |
+| Versus Models | Models owns the endpoint, keys, and model list; this page only declares reasoning levels and image input |
+| Version footer | The page footer shows the plugin version and copyright years frozen at pack time; starting Harness does not advance the date |
 
 ## Install
 
@@ -44,35 +46,37 @@ Do not use `npm install`. In a terminal:
 dsh plugin --profile web add dsh-plugin-effort-declare
 ```
 
-If you use third-party DSH, you must set `DSH_HOME` first, or the package lands in another directory. See the [install guide](./INSTALL.en.md). To update an npm install:
+If you run a third-party DeepSeek Harness distribution, set `DSH_HOME` first, or the package lands in another directory. See the [install guide](./INSTALL.en.md). To update an npm install:
 
 ```bash
 dsh plugin --profile web update dsh-plugin-effort-declare
 ```
 
-Or `add dsh-plugin-effort-declare@latest`. Details: [install guide](./INSTALL.en.md) **Update**.
+Or `add dsh-plugin-effort-declare@latest`. Details: [install guide](./INSTALL.en.md), **Update**.
 
-Restart DSH, then open **Settings → Reasoning efforts**. The footer shows which version is installed. Add a custom provider on the Models page first. GitHub, local folder, and uninstall: [install guide](./INSTALL.en.md).
+Restart DSH, then open **Settings → Reasoning efforts**. The footer shows the installed version. Add a custom provider on the Models page first. GitHub, local folder, and uninstall: [install guide](./INSTALL.en.md).
 
 ## Usage
 
 1. Open the provider card, or apply a preset first.
-2. Check the levels that should appear in the picker. Change the spelling if the gateway uses different names. Off (no thinking) can be: not offered; offered without sending a parameter; or send `none` (or another string).
-3. You can usually leave **Advanced** collapsed.
-4. Save. If you selected no thinking level, or only Off, the error is shown on that card.
+2. Check the reasoning levels that should appear in the picker. Change the on-the-wire spelling if the gateway uses different names. Off (no thinking) can be omitted, offered without sending a parameter, or sent as `none` (or another string).
+3. If the model supports vision, check **Accepts image input**. Check this only when the model actually accepts images: an incorrect declaration admits the picture into session history, after which the gateway rejects the turn.
+4. **Advanced** protocol options can usually stay collapsed.
+5. Save. Selecting no thinking level, or Off alone, shows an error on that card. Saving image input without changing efforts is allowed. Clearing the effort declaration does not clear image input.
 
 Saving is disabled when settings are read-only.
 
-## Limits
+## Limitations
 
-- Only custom providers you added on Models, using the OpenAI Completions protocol
+- Only custom providers added on the Models page that use the OpenAI Completions protocol
 - Official DeepSeek, catalog models, and Anthropic endpoints are not edited here
-- **Clear this model’s declaration** hides the Effort row again for that model
-- Will not silently turn thinking on for background work such as titles or compaction
+- **Clear this model’s declaration** removes `reasoningEfforts` only, which hides the Effort row; uncheck image input separately to drop the vision declaration
+- Does not turn thinking on by default for background work such as title generation or compaction
+- Does not enable image input for an entire route or for every model automatically
 
 ## Development
 
-Code, pull requests, and npm publishing: [CONTRIBUTING.en.md](./CONTRIBUTING.en.md).
+Code changes, pull requests, and npm publishing: [CONTRIBUTING.en.md](./CONTRIBUTING.en.md).
 
 ## License
 

@@ -7,11 +7,11 @@
   </samp>
 </p>
 
-回到 [README](./README.md)。需要 DeepSeek Harness **0.1.0-rc.8 或更新**。不要用 `npm install`，必须用下面的 `dsh plugin` 命令。
+回到 [README](./README.md)。需要 DeepSeek Harness **0.1.0-rc.8** 或更高版本。不要使用 `npm install`，必须使用下面的 `dsh plugin` 命令。
 
-## 第三方 DSH：先设置 DSH_HOME
+## 第三方发行版：先设置 DSH_HOME
 
-`dsh plugin` 会装进**当前** `DSH_HOME`。没设置时默认是用户目录下的 `.dsh`。第三方发行版的数据目录往往不是这条路径，需要改成你这份 DSH 实际使用的 home。
+`dsh plugin` 会装进**当前** `DSH_HOME`。未设置时默认为用户目录下的 `.dsh`。第三方发行版的数据目录往往不是这条路径，请改为这份 DSH 实际使用的 home。
 
 ```bash
 # Linux / macOS
@@ -23,7 +23,7 @@ export DSH_HOME=/path/to/your/dsh-home
 $env:DSH_HOME = "X:\path\to\your\dsh-home"
 ```
 
-设好后再跑安装命令。配置档名称一般是 `web`。
+设置完成后再执行安装命令。配置档名称一般为 `web`。
 
 ## 从 npm 安装（推荐）
 
@@ -31,35 +31,35 @@ $env:DSH_HOME = "X:\path\to\your\dsh-home"
 dsh plugin --profile web add dsh-plugin-effort-declare
 ```
 
-可选：确认已经装上：
+可选：确认层已加载：
 
 ```bash
 dsh --profile web --dump-config
 ```
 
-输出里应出现 `dsh-plugin-effort-declare`。
+输出中应出现 `dsh-plugin-effort-declare`。
 
 ## 更新
 
-插件已发布到 npm。更新也走 `dsh plugin`（官方会把参数转给 pnpm），不要用 `npm update`。
+插件已发布到 npm。更新同样通过 `dsh plugin`（官方 CLI 将参数转给 pnpm），不要使用 `npm update`。
 
-第三方 DSH 仍须先设置 `DSH_HOME`，与安装相同。
+第三方发行版仍须先设置 `DSH_HOME`，与安装相同。
 
-已从 npm 安装过，升级到 semver 范围内的新版本：
+已从 npm 安装、且只需升级到现有 semver 范围内的新版本：
 
 ```bash
 dsh plugin --profile web update dsh-plugin-effort-declare
 ```
 
-要最新正式版（含改依赖范围）：
+需要最新正式版（含改写依赖范围）时：
 
 ```bash
 dsh plugin --profile web add dsh-plugin-effort-declare@latest
 ```
 
-然后重启 DSH。可用 `dsh --profile web --dump-config` 确认层还在。
+然后重启 DSH。可用 `dsh --profile web --dump-config` 确认层仍在。
 
-从 GitHub 装的：再执行一次下面的命令，或使用带 commit 的规格：
+从 GitHub 安装的副本：再执行一次下面的命令，或使用带 commit 的规格：
 
 ```bash
 dsh plugin --profile web add github:zimodzh/dsh-plugin-effort-declare
@@ -73,17 +73,17 @@ GitHub：
 dsh plugin --profile web add github:zimodzh/dsh-plugin-effort-declare
 ```
 
-如果 pnpm 拒绝构建，把包名加进该配置档里 `pnpm-workspace.yaml` 的 `allowBuilds`，再 `add` 一次。
+如果 pnpm 拒绝构建，将该包名加入此配置档 `pnpm-workspace.yaml` 的 `allowBuilds`，再执行一次 `add`。
 
-本地文件夹（仓库里需要已有 `lib/`；Windows 建议用正斜杠）：
+本地文件夹（仓库中须已有 `lib/`；Windows 建议使用正斜杠）：
 
 ```bash
 dsh plugin --profile web add file:/绝对路径/dsh-plugin-effort-declare
 ```
 
-## 装完之后
+## 安装之后
 
-重启 DSH。打开 **设置 → 推理档位**。页脚是当前装上的版本（例如 `0.1.3 © 2026 Stardust`），改 `package.json` 后必须重新打包再安装才会变。先在「模型」页添加第三方提供方，本页才会出现可编辑的条目。
+重启 DSH。打开 **设置 → 推理档位**，按模型声明推理档位；视觉模型再勾选 **支持图片输入**。页脚为当前安装版本（例如 `0.1.4 © 2026 Stardust`）。修改 `package.json` 的 version 后须重新打包并安装才会更新页脚。请先在「模型」页添加第三方提供方，本页才会出现可编辑条目。
 
 ## 卸载
 

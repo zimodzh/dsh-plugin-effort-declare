@@ -61,3 +61,14 @@ export const DEEPSEEK_OFFICIAL = 'deepseek-official'
 
 /** Any route key walks a dict schema to the same profile node. */
 export const SCHEMA_PROBE_ROUTE = '\u0000probe'
+
+/** Request modalities llm-pi-ai accepts on `models[].input` / `defaultInput`. */
+export const INPUT_MODALITIES = ['text', 'image'] as const
+
+export type InputModality = (typeof INPUT_MODALITIES)[number]
+
+/**
+ * Canonical write for a hand-declared vision model.
+ * Must include `text`; image-only is not a serviceable OpenAI-completions route.
+ */
+export const IMAGE_CAPABLE_INPUT: readonly InputModality[] = ['text', 'image']

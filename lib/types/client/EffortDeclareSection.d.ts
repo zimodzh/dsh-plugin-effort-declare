@@ -1,6 +1,6 @@
 /**
- * Settings section: per-model reasoningEfforts + openai-completions compat
- * for hand-declared llm-pi-ai routes.
+ * Settings section: per-model reasoningEfforts, image input, and
+ * openai-completions compat for hand-declared llm-pi-ai routes.
  */
 import { type ReactNode } from 'react';
 import type { IApiClient } from '@deepseek-ai/dsh-api-remotes/client';

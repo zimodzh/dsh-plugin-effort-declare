@@ -15,36 +15,38 @@
   <a href="https://github.com/deepseek-ai/deepseek-harness" target="_blank" rel="noopener noreferrer"><img alt="Agent" src="https://img.shields.io/badge/Agent-Deepseek%20Harness-000000"></a>
 </p>
 
-给自己添加的 OpenAI 兼容模型补上「推理强度」选项，对话里的 Effort 行就会出现。
+这是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）的设置插件：为手工添加的 OpenAI 兼容模型声明推理档位与图片输入。声明之后，对话输入框才会出现 Effort 行，并允许附加图片；未声明则按纯文本模型处理。
 
-> 这是社区维护的第三方插件，不是 DeepSeek 官方项目，也未获官方背书。需要 **DeepSeek Harness 0.1.0-rc.8** 及以上， **DeepSeek Harness 0.1.0-rc.8** 之前的版本没测试过，不保证可用。
+> 社区维护的第三方 DSH 插件，并非 DeepSeek 官方项目，亦未经官方背书。要求 **DeepSeek Harness 0.1.0-rc.8** 或更高版本；更早版本未经测试。
 
-## 它解决什么
+## 作用
 
-在「模型」页手工加的第三方供应商，需要先声明能选哪些推理档，对话里才会出现 Effort。但通常它们不会声明。所以本插件在设置里加一页 **推理档位**：勾选这个模型能提供哪些档位。对话里怎么选、请求怎么发给接口，仍由 DSH 处理。本插件只改设置，不改密钥。
+在「模型」页手工添加的第三方提供方，默认不会声明 `reasoningEfforts` 与 `input`。DeepSeek Harness 据此决定是否展示 Effort 选择器、是否接受图片附件。本插件在设置中增加 **推理档位** 页，向官方 `llm-pi-ai` 命名空间写入这两项能力。每轮选用哪一档、请求如何发往网关，仍由 Harness 处理。本插件不修改 API 密钥、端点或模型名单。
 
-- 不会自动改你没保存过的模型
-- 不会改你当前选中的档位，也不会改默认档位
-- 不会替换官方「模型」页
+- 不改写用户尚未保存的模型
+- 不改写当前或默认推理档
+- 不替换官方「模型」页
+- 不拦截模型流，也不替换适配器
 
 ## 功能
 
 | 功能 | 说明 |
 | --- | --- |
-| 推理档位页 | 按模型勾选可选档位；网关用的名字如果不同，可以改拼写 |
-| 预设 | DeepSeek 兼容、OpenAI 兼容、只开/关思考。点预设会换成那一套，不是叠加上去 |
-| 和「模型」页 | 「模型」管地址、密钥和模型名单；本页只管「能选哪些推理档」 |
-| 版本页脚 | 页面底部显示当前插件版本与版权年（打包时写入；打开 DSH 不会跟着日历变） |
+| 推理档位 | 按模型勾选可选档位；网关拼写不同时可改写线上名称 |
+| 图片输入 | 按模型声明是否接受图片。勾选写入 `input: ['text', 'image']`；取消则删除该键，不写空列表 |
+| 预设 | DeepSeek 兼容、OpenAI 兼容、仅开/关。预设替换当前协议方言，而非叠加 |
+| 与「模型」页 | 「模型」页管理端点、密钥与模型名单；本页只声明推理档位与图片输入 |
+| 版本页脚 | 页面底部显示打包时写入的插件版本与版权年；启动 Harness 不会更新日期 |
 
 ## 安装
 
-不要用 `npm install`。在终端执行：
+不要使用 `npm install`。在终端执行：
 
 ```bash
 dsh plugin --profile web add dsh-plugin-effort-declare
 ```
 
-若使用第三方DSH，必须先设置 `DSH_HOME`，否则会装到另一份目录。步骤见 [安装说明](./INSTALL.md)。更新已安装的 npm 包：
+若使用第三方发行的 DeepSeek Harness，必须先设置 `DSH_HOME`，否则会装到另一目录。步骤见 [安装说明](./INSTALL.md)。更新已安装的 npm 包：
 
 ```bash
 dsh plugin --profile web update dsh-plugin-effort-declare
@@ -52,27 +54,29 @@ dsh plugin --profile web update dsh-plugin-effort-declare
 
 或 `add dsh-plugin-effort-declare@latest`。详见 [安装说明](./INSTALL.md) 的「更新」。
 
-装完后重启 DSH，打开 **设置 → 推理档位**。页脚可核对装上的版本。请先在「模型」页添加过第三方提供方。GitHub、本地文件夹和卸载也在 [安装说明](./INSTALL.md)。
+安装后重启 DSH，打开 **设置 → 推理档位**。页脚可核对已安装版本。请先在「模型」页添加第三方提供方。从 GitHub、本地文件夹安装以及卸载，见 [安装说明](./INSTALL.md)。
 
 ## 使用
 
-1. 打开对应提供方的卡片，或先点一个预设。
-2. 勾选这个模型要出现在选择器里的档位。网关名字不同就改拼写。关闭思考（Off）可以：不提供、提供但不发参数、或发送 `none` 等字符串。
-3. 一般不用打开「高级」。
-4. 点保存。若一个思考档都没选、或只开了 Off，错误会显示在这张卡片上。
+1. 打开对应提供方卡片，或先应用一套预设。
+2. 勾选应出现在选择器中的推理档。网关名称不同时修改线上拼写。关闭思考（Off）可以：不提供、提供但不发送参数，或发送 `none` 等字符串。
+3. 若该模型支持视觉，勾选 **支持图片输入**。仅在模型确实接受图片时勾选：误声明会使图片进入会话历史，随后被网关拒绝。
+4. 「高级」协议选项通常可保持折叠。
+5. 保存。未选择任何思考档、或只开启 Off 时，错误显示在该卡片上。只修改图片输入、不改档位，也可以保存。清除档位声明不会清除图片输入。
 
-当前设置为只读时无法保存。
+设置为只读时无法保存。
 
 ## 限制
 
-- 只对你在「模型」页**手工添加**、协议为 OpenAI Completions 的提供方生效
-- 官方 DeepSeek、目录自带的模型、Anthropic 接口不在本页编辑
-- 「清除本模型声明」之后，这个模型会重新没有 Effort 行
-- 不会在生成标题、压缩等后台请求里偷偷打开思考
+- 仅适用于在「模型」页**手工添加**、协议为 OpenAI Completions 的提供方
+- 官方 DeepSeek、目录自带模型、Anthropic 接口不在本页编辑
+- 「清除本模型声明」只移除 `reasoningEfforts`，Effort 行随之隐藏；图片声明需单独取消勾选
+- 不会为标题生成、压缩等后台请求默认打开思考
+- 不会为整条路由或全部模型自动打开图片输入
 
 ## 开发
 
-改代码、提 PR、发布到 npm：见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
+修改代码、提交 Pull Request、发布到 npm：见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
 
 ## License
 

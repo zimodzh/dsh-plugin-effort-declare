@@ -1,6 +1,6 @@
 /**
- * Settings section: per-model reasoningEfforts + openai-completions compat
- * for hand-declared llm-pi-ai routes.
+ * Settings section: per-model reasoningEfforts, image input, and
+ * openai-completions compat for hand-declared llm-pi-ai routes.
  */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { IApiClient } from '@deepseek-ai/dsh-api-remotes/client'
@@ -29,7 +29,8 @@ import {
 import { applyPresetCompat, applyPresetEfforts, PRESETS, type PresetId } from '../core/presets.ts'
 import { buildSaveOps } from '../core/path-ops.ts'
 import { cloneModels, cloneObject } from '../core/paths.ts'
-import { modelEffortError } from '../core/validate.ts'
+import { readImageCapable, writeImageCapable } from '../core/input.ts'
+import { modelRowError } from '../core/validate.ts'
 import { PLUGIN_FOOTER_TEXT } from './build-info.ts'
 import {
   foldReloadNotices,
@@ -75,10 +76,11 @@ function compatSummary(compat: Record<string, unknown>): string {
   return parts.join(' · ')
 }
 
-function errorText(code: ReturnType<typeof modelEffortError>, t: (key: EffortDeclareKey) => string): string | undefined {
+function errorText(code: ReturnType<typeof modelRowError>, t: (key: EffortDeclareKey) => string): string | undefined {
   if (code === 'empty') return t('errorEmpty')
   if (code === 'off-only') return t('errorOffOnly')
   if (code === 'bad-wire') return t('errorBadWire')
+  if (code === 'bad-input') return t('errorBadInput')
   return undefined
 }
 
@@ -114,6 +116,16 @@ function ModelRowEditor(props: {
           {t('clear')}
         </button>
       </div>
+      <label className={css.check}>
+        <input
+          type="checkbox"
+          checked={readImageCapable(row)}
+          disabled={disabled}
+          onChange={(event) => { onChange(writeImageCapable(row, event.target.checked)) }}
+        />
+        {t('imageInput')}
+      </label>
+      {readImageCapable(row) ? <p className={css.notice}>{t('imageInputHint')}</p> : null}
       <span className={css.fieldLabel}>{t('levels')}</span>
       <div className={css.levels}>
         {THINKING_LEVELS_WITHOUT_OFF.map((level) => (
@@ -197,7 +209,7 @@ function RouteCard(props: {
   const summary = compatSummary(draft.compat)
   const sameWire = draft.compat.supportsReasoningEffort === false
   const clientError = draft.models
-    .map(row => errorText(modelEffortError(row), t))
+    .map(row => errorText(modelRowError(row), t))
     .find(text => text !== undefined)
   const dirty = draftDirty(draft)
 
@@ -486,7 +498,7 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
       return
     }
     const blocking = draft.models
-      .map(row => errorText(modelEffortError(row), t))
+      .map(row => errorText(modelRowError(row), t))
       .find(text => text !== undefined)
     if (blocking !== undefined) {
       patchNotice(draft.provider, { kind: 'error', text: blocking })

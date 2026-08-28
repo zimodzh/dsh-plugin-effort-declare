@@ -1,7 +1,7 @@
 {
   "name": "dsh-plugin-effort-declare",
-  "description": "Settings page to declare per-model reasoningEfforts and openai-completions compat on hand-declared llm-pi-ai routes. Writes the official namespace; does not intercept llm/stream or replace the Models page.",
-  "version": "0.1.3",
+  "description": "Declare per-model reasoning efforts, image input, and openai-completions dialect on hand-declared llm-pi-ai routes. Writes the official namespace; does not intercept llm/stream or replace the Models page.",
+  "version": "0.1.4",
   "private": false,
   "license": "MIT",
   "repository": {

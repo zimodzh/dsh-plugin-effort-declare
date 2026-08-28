@@ -16,8 +16,8 @@
 | 路径 | 说明 |
 | --- | --- |
 | [`index.ts`](./index.ts) | Host 入口。导出 `name` 与 `apply`。v1 不注册 host 服务、不挂适配器；组合包仍需要这一入口才能被 `dsh plugin add` 加载。 |
-| [`core/`](./core/) | 与 UI 无关的纯函数：档位、预设、保存 ops、草稿合并、路由过滤、页脚归因格式。client 与单测共用；Host 入口 v1 不引用这些函数（`tsconfig.host` 仍编译 `core` 以产出类型）。 |
-| [`client/`](./client/) | 浏览器半区：locale、设置页、对 `llm-pi-ai` 的 `settings.mutate`。 |
+| [`core/`](./core/) | 与 UI 无关的纯函数：推理档位、图片输入、预设、保存 ops、草稿合并、路由过滤、页脚归因格式。client 与单测共用；Host 入口 v1 不引用这些函数（`tsconfig.host` 仍编译 `core` 以产出类型）。 |
+| [`client/`](./client/) | 浏览器半区：locale、设置页，经官方 `settings.mutate` 写入 `llm-pi-ai` 的 `reasoningEfforts` 与 `input`。 |
 | [`css-modules.d.ts`](./css-modules.d.ts) | `*.module.css` 模块类型（class map + `cssText` / `cssTagId`）。 |
 
 `tsconfig.host.json` 编译 host + `core`；`tsconfig.client.json` 编译 `client` + `core`。构建产物在 [`lib/`](../lib/)。

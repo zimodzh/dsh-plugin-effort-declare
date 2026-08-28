@@ -34,9 +34,13 @@ export declare function applySaveSuccess(drafts: readonly RouteDraft[], savedPro
     user: unknown;
     revision: number;
 }): RouteDraft[];
+/** Model-row fields this page edits; other keys follow the Models page. */
+export declare const MODEL_OVERLAY_KEYS: readonly ["reasoningEfforts", "input"];
+export type ModelOverlayKey = (typeof MODEL_OVERLAY_KEYS)[number];
 /**
  * Membership follows the latest user-layer models list (Models page add/delete).
- * Local unsaved `reasoningEfforts` (including a cleared key) overlay by id.
+ * Local unsaved overlay keys (including a cleared key) overlay by id; other
+ * fields on the row follow incoming.
  */
 export declare function mergeModelsById(args: {
     prevModels: readonly Record<string, unknown>[];
@@ -62,9 +66,9 @@ export declare function mergeCompat(args: {
 };
 /**
  * Apply a freshly loaded table. Membership and metadata follow incoming;
- * unsaved reasoningEfforts / dirty compat keys overlay by id. Conflict only
- * when a locally dirty field also changed in originals (revision-only bumps
- * and sibling-card saves do not warn).
+ * unsaved overlay keys (`reasoningEfforts`, `input`) / dirty compat keys
+ * overlay by id. Conflict only when a locally dirty field also changed in
+ * originals (revision-only bumps and sibling-card saves do not warn).
  */
 export declare function mergeLoadedDrafts(current: readonly RouteDraft[], incoming: readonly RouteDraft[], options: {
     preserveDirty: boolean;
