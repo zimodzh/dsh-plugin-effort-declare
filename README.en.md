@@ -17,9 +17,9 @@
   <a href="https://www.dsh.so/artifact/dsh-plugin-effort-declare/" target="_blank" rel="noopener noreferrer"><img alt="dsh.so install" src="https://www.dsh.so/badge/install/dsh-plugin-effort-declare.svg"></a>
 </p>
 
-A settings plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH). It declares reasoning levels and image input for hand-added OpenAI-compatible models. After a declaration, the composer shows the Effort row and accepts image attachments; undeclared models are treated as text-only.
+A settings plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH). It declares reasoning levels and image input for hand-added OpenAI-compatible models. After a declaration, the conversation input shows the Effort row and accepts image attachments; undeclared models are treated as text-only.
 
-> A community-maintained third-party DSH plugin. It is not an official DeepSeek project and is not endorsed by DeepSeek. Requires **DeepSeek Harness 0.1.0-rc.8** or later. Earlier versions have not been tested.
+> A community-maintained third-party DSH plugin. It is not an official DeepSeek project and is not endorsed by DeepSeek. Requires **DeepSeek Harness 0.1.2-alpha.2**. Earlier client APIs are no longer supported, including 0.1.0-rc.8 which this plugin previously targeted.
 
 ## Purpose
 

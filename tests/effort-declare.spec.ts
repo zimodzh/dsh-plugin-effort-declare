@@ -31,7 +31,6 @@ import {
   waitForNamespaceRevisionChange,
 } from '../src/client/load-drafts.ts'
 import { validateSaveDraft, type SchemaOps } from '../src/client/schema-ops.ts'
-import type { IApiClient } from '@deepseek-ai/dsh-api-remotes/client'
 import type { SettingsDescribeFace } from '@deepseek-ai/dsh-client-ui-settings/client'
 import {
   applyPresetCompat,
@@ -45,7 +44,7 @@ import { readImageCapable, validateInput, writeImageCapable } from '../src/core/
 import { modelRowError } from '../src/core/validate.ts'
 
 describe('catalog pin', () => {
-  it('pins thinking levels to the llm-pi-ai rc.8 / rc.2 set', () => {
+  it('pins thinking levels to the llm-pi-ai 0.1.2 set', () => {
     expect([...THINKING_LEVELS]).toEqual(['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'])
   })
 
@@ -56,6 +55,7 @@ describe('catalog pin', () => {
       'deepseek',
       'openrouter',
       'together',
+      'baseten',
       'zai',
       'qwen',
       'chat-template',
@@ -651,6 +651,16 @@ describe('mergeModelsById / mergeCompat', () => {
 })
 
 describe('loadDrafts', () => {
+  const stubLlm = (entries: readonly {
+    provider: string
+    displayName?: string
+    settingsNs?: string
+    settingsPath?: readonly string[]
+    declared?: boolean
+  }[] = []) => ({
+    listConfigurableProviders: async () => ({ ok: true as const, value: entries }),
+  })
+
   it('reads drafts from user, not effective value, and keeps settingsPath', async () => {
     const describe = {
       ensure: async () => {},
@@ -688,27 +698,15 @@ describe('loadDrafts', () => {
       }),
     } satisfies Pick<SettingsDescribeFace, 'ensure' | 'getSnapshot'>
 
-    const api = {
-      llm: {
-        providers: async () => ({
-          result: {
-            ok: true as const,
-            value: {
-              providers: [{
-                provider: 'poke',
-                displayName: 'Poke',
-                settingsNs: 'llm-pi-ai',
-                settingsPath: ['providers', 'poke'],
-                declared: true,
-                active: false,
-              }],
-            },
-          },
-        }),
-      },
-    }
+    const llm = stubLlm([{
+      provider: 'poke',
+      displayName: 'Poke',
+      settingsNs: 'llm-pi-ai',
+      settingsPath: ['providers', 'poke'],
+      declared: true,
+    }])
 
-    const result = await loadDrafts(api as Pick<IApiClient, 'llm'>, describe, stubSchema)
+    const result = await loadDrafts(llm, describe, stubSchema)
     expect(result.error).toBeUndefined()
     expect(result.drafts).toHaveLength(1)
     expect(result.drafts[0]?.models[0]?.id).toBe('from-user')
@@ -755,26 +753,15 @@ describe('loadDrafts', () => {
       }),
     } satisfies Pick<SettingsDescribeFace, 'ensure' | 'getSnapshot'>
 
-    const api = {
-      llm: {
-        providers: async () => ({
-          result: {
-            ok: true as const,
-            value: {
-              providers: [{
-                provider: 'poke',
-                displayName: 'Poke',
-                settingsNs: 'llm-pi-ai',
-                settingsPath: ['providers', 'poke'],
-                declared: true,
-              }],
-            },
-          },
-        }),
-      },
-    }
+    const llm = stubLlm([{
+      provider: 'poke',
+      displayName: 'Poke',
+      settingsNs: 'llm-pi-ai',
+      settingsPath: ['providers', 'poke'],
+      declared: true,
+    }])
 
-    const result = await loadDrafts(api as Pick<IApiClient, 'llm'>, describe, stubSchema)
+    const result = await loadDrafts(llm, describe, stubSchema)
     expect(result.drafts[0]?.compatPresent).toBe(false)
     expect(result.drafts[0]?.compat).toEqual({})
     expect(result.drafts[0]?.models[0]?.id).toBe('user')
@@ -803,17 +790,7 @@ describe('loadDrafts', () => {
       }),
     } satisfies Pick<SettingsDescribeFace, 'ensure' | 'getSnapshot'>
 
-    const api = {
-      llm: {
-        providers: async () => ({
-          result: {
-            ok: true as const,
-            value: { providers: [] },
-          },
-        }),
-      },
-    }
-
+    const llm = stubLlm()
     const emptyUnion: SchemaOps = {
       ...stubSchema,
       nodeAtPath: () => ({ type: 'union', list: [] }),
@@ -824,9 +801,9 @@ describe('loadDrafts', () => {
         throw new Error('schema missing')
       },
     }
-    expect((await loadDrafts(api as Pick<IApiClient, 'llm'>, describe, emptyUnion)).formats).toEqual([])
-    expect((await loadDrafts(api as Pick<IApiClient, 'llm'>, describe, thrown)).formats).toEqual([])
-    expect((await loadDrafts(api as Pick<IApiClient, 'llm'>, describe, stubSchema)).formats).toEqual([])
+    expect((await loadDrafts(llm, describe, emptyUnion)).formats).toEqual([])
+    expect((await loadDrafts(llm, describe, thrown)).formats).toEqual([])
+    expect((await loadDrafts(llm, describe, stubSchema)).formats).toEqual([])
   })
 
   it('reads thinkingFormat choices from a live schema union', async () => {
@@ -851,17 +828,7 @@ describe('loadDrafts', () => {
       }),
     } satisfies Pick<SettingsDescribeFace, 'ensure' | 'getSnapshot'>
 
-    const api = {
-      llm: {
-        providers: async () => ({
-          result: {
-            ok: true as const,
-            value: { providers: [] },
-          },
-        }),
-      },
-    }
-
+    const llm = stubLlm()
     const live: SchemaOps = {
       ...stubSchema,
       nodeAtPath: (_root, path) => (
@@ -870,7 +837,7 @@ describe('loadDrafts', () => {
           : undefined
       ),
     }
-    expect((await loadDrafts(api as Pick<IApiClient, 'llm'>, describe, live)).formats).toEqual([
+    expect((await loadDrafts(llm, describe, live)).formats).toEqual([
       'deepseek',
       'openai',
     ])
@@ -898,16 +865,10 @@ describe('loadDrafts', () => {
         },
       }),
     } satisfies Pick<SettingsDescribeFace, 'ensure' | 'getSnapshot'>
-    const api = {
-      llm: {
-        providers: async () => ({
-          result: { ok: true as const, value: { providers: [] } },
-        }),
-      },
-    }
-    await loadDrafts(api as Pick<IApiClient, 'llm'>, describe, stubSchema, 'snapshot')
+    const llm = stubLlm()
+    await loadDrafts(llm, describe, stubSchema, 'snapshot')
     expect(ensured).toBe(0)
-    await loadDrafts(api as Pick<IApiClient, 'llm'>, describe, stubSchema, 'ensure')
+    await loadDrafts(llm, describe, stubSchema, 'ensure')
     expect(ensured).toBe(1)
   })
 })

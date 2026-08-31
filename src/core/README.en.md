@@ -9,7 +9,7 @@
 
 Domain logic for the plugin: no React, no Cordis service instances. The settings page and Vitest both depend on these pure functions, so reasoning-effort and image-input semantics can regress without booting DSH.
 
-Canonical level names and `thinkingFormat` values follow `@deepseek-ai/dsh-llm-pi-ai` (0.1.0-rc.8; 0.1.1-rc.2 uses the same level set). `thinkingFormat` is pinned to the live-schema snapshot in [`tests/fixtures/pi-ai-thinking-format-union.ts`](../../tests/fixtures/pi-ai-thinking-format-union.ts); effort keys stay a locally pinned whitelist. UI choices come only from the live schema union. Writable `models[].input` modalities are `text` and `image`, matching the official schema.
+Canonical level names and `thinkingFormat` values follow `@deepseek-ai/dsh-llm-pi-ai` (0.1.2-alpha.2; the level set matches rc.8, and `thinkingFormat` adds `baseten`). `thinkingFormat` is pinned to the live-schema snapshot in [`tests/fixtures/pi-ai-thinking-format-union.ts`](../../tests/fixtures/pi-ai-thinking-format-union.ts); effort keys stay a locally pinned whitelist. UI choices come only from the live schema union. Writable `models[].input` modalities are `text` and `image`, matching the official schema.
 
 ## What's in this directory
 
@@ -26,4 +26,4 @@ Canonical level names and `thinkingFormat` values follow `@deepseek-ai/dsh-llm-p
 | [`validate.ts`](./validate.ts) | Per-row validation: `reasoningEfforts` first, then `input`. |
 | [`attribution.ts`](./attribution.ts) | Settings footer line: `version © year Stardust`. Start year is 2026; end year is the UTC year at pack time, not the user’s clock when DSH starts. |
 
-An **absent** field means default-off. Do not encode an undeclared effort as `reasoningEfforts: false` — in official semantics `false` strips reasoning from a catalog model. Do not encode “no vision” as `input: []` — the official resolver treats an empty list as absent, but a bad stamp must not be re-saved. Disabling image input must delete the key; do not write `[text]`.
+An **absent** field means default-off. Do not encode an undeclared effort as `reasoningEfforts: false` — in official semantics `false` strips reasoning from a catalog model. Do not encode “no vision” as `input: []` — the official resolver treats an empty list as absent, but a bad stamp must not be re-saved. Disabling image input must delete the key; do not write `['text']`.

@@ -3,8 +3,8 @@
  * openai-completions compat for hand-declared llm-pi-ai routes.
  */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import type { IApiClient } from '@deepseek-ai/dsh-api-remotes/client'
 import type { SettingsDescribeFace } from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { LlmDirectoryRemote, SettingsWriteRemote } from './remotes.ts'
 import { LLM_PI_AI_NS, THINKING_LEVELS_WITHOUT_OFF } from '../core/catalog.ts'
 import {
   alignDraft,
@@ -53,7 +53,8 @@ export type Invalidation =
   | { source: 'settings'; revision: number }
 
 export interface EffortDeclareSectionInjected {
-  api: Pick<IApiClient, 'settings' | 'llm'>
+  llm: LlmDirectoryRemote
+  settings: SettingsWriteRemote
   describe: SettingsDescribeFace
   schema: SchemaOps
   subscribeInvalidate: (listener: (event: Invalidation) => void) => () => void
@@ -342,7 +343,8 @@ function RouteCard(props: {
 
 export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNode {
   const t = props.t
-  const api = props.api
+  const llm = props.llm
+  const settings = props.settings
   const describe = props.describe
   const schema = props.schema
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -407,10 +409,10 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
   }
 
   const loadSnapshotThenSettle = async (generation: number, preserveDirty: boolean): Promise<void> => {
-    if (api === undefined || describe === undefined || schema === undefined) return
+    if (llm === undefined || typeof llm.listConfigurableProviders !== 'function' || describe === undefined || schema === undefined) return
     if (!generationIsCurrent(generationRef, generation)) return
     try {
-      const result = await loadDrafts(api, describe, schema, 'snapshot')
+      const result = await loadDrafts(llm, describe, schema, 'snapshot')
       settleReload(generation, preserveDirty, result)
     } catch (failure) {
       failGeneration(generation, failure)
@@ -418,7 +420,7 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
   }
 
   const reload = useCallback((preserveDirty: boolean, mode: LoadDraftsMode = 'ensure'): void => {
-    if (api === undefined || describe === undefined || schema === undefined) {
+    if (llm === undefined || typeof llm.listConfigurableProviders !== 'function' || describe === undefined || schema === undefined) {
       setStatus('error')
       setError(t('loadError'))
       return
@@ -426,15 +428,15 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
     const { generation } = beginGeneration()
     if (draftsRef.current.length === 0) setStatus('loading')
     setError('')
-    void loadDrafts(api, describe, schema, mode).then((result) => {
+    void loadDrafts(llm, describe, schema, mode).then((result) => {
       settleReload(generation, preserveDirty, result)
     }, (failure: unknown) => {
       failGeneration(generation, failure)
     })
-  }, [api, describe, schema, t])
+  }, [llm, describe, schema, t])
 
   const refreshAtRevision = useCallback((revision: number, preserveDirty: boolean): void => {
-    if (api === undefined || describe === undefined || schema === undefined) return
+    if (llm === undefined || typeof llm.listConfigurableProviders !== 'function' || describe === undefined || schema === undefined) return
     const { generation, signal } = beginGeneration()
     if (draftsRef.current.length === 0) setStatus('loading')
     setError('')
@@ -444,7 +446,7 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
     }, (failure: unknown) => {
       failGeneration(generation, failure)
     })
-  }, [api, describe, schema, t])
+  }, [llm, describe, schema, t])
 
   const flushPendingSettings = (refresh: (revision: number, preserveDirty: boolean) => void): void => {
     const pending = pendingRevisionRef.current
@@ -492,7 +494,7 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
   }
 
   const save = async (draft: RouteDraft): Promise<void> => {
-    if (api === undefined || describe === undefined || schema === undefined) return
+    if (settings === undefined || typeof settings.mutate !== 'function' || describe === undefined || schema === undefined) return
     if (status === 'loading' || busyRouteRef.current !== null) {
       patchNotice(draft.provider, { kind: 'error', text: t('saveBusy') })
       return
@@ -545,16 +547,12 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
           }
         }
       }
-      const response = await api.settings.mutate({
-        ns: LLM_PI_AI_NS,
-        ops,
-        expectedRevision: draft.revision,
-      })
-      if (!response.result.ok) {
-        const conflict = response.result.error.code === 'settings-conflict'
+      const response = await settings.mutate(LLM_PI_AI_NS, ops, draft.revision)
+      if (!response.ok) {
+        const conflict = response.error.code === 'settings/conflict'
         patchNotice(draft.provider, {
           kind: conflict ? 'conflict' : 'error',
-          text: conflict ? t('conflict') : response.result.error.message,
+          text: conflict ? t('conflict') : response.error.message,
         })
         if (conflict) {
           const { generation, signal } = beginGeneration()
@@ -567,7 +565,7 @@ export function EffortDeclareSection(props: EffortDeclareSectionProps): ReactNod
         }
         return
       }
-      const view = response.result.value
+      const view = response.value
       echoedRevisionRef.current = view.revision
       describe.acceptView(view)
       applyDrafts(applySaveSuccess(draftsRef.current, draft.provider, {

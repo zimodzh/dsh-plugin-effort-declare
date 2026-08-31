@@ -45,7 +45,8 @@ pnpm build
 
 - Host and client must use separate `tsconfig` files (their Context merges cannot share one TypeScript program)
 - The client bundle must not inline `@deepseek-ai/*` except platform modules in the shell’s frozen table. Collaborate through Cordis services; do not value-import the official Models page
-- Source: [src/README.md](./src/README.md); domain logic: [src/core/README.md](./src/core/README.md); settings UI: [src/client/README.md](./src/client/README.md); tests: [tests/README.md](./tests/README.md)
+- Client calls go through `ctx.remote.llm` / `ctx.remote.settings` (`listConfigurableProviders`, `settings.mutate`). Do not use `connection.api`. `@deepseek-ai/dsh-client-runtime` is not published for 0.1.2-alpha.2; do not add it back as a peer or a `dsh.client.inject` entry
+- Source: [src/README.en.md](./src/README.en.md); domain logic: [src/core/README.en.md](./src/core/README.en.md); settings UI: [src/client/README.en.md](./src/client/README.en.md); tests: [tests/README.en.md](./tests/README.en.md)
 
 Before sending a change, say whether it is a bug fix, a feature, or an alignment with a newer DSH / pi-ai schema. Update zh and en docs together. The root README and [INSTALL.en.md](./INSTALL.en.md) are for users; this file and the READMEs under `src/` and `tests/` are for people changing code.
 

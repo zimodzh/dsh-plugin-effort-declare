@@ -45,6 +45,7 @@ pnpm build
 
 - Host 与 client 必须分 `tsconfig`（两边 Context merge 不能共一个 TypeScript Program）
 - 客户端 bundle 禁止把 `@deepseek-ai/*` 打进包内（shell 冻结模块表里的平台模块除外）。跨插件协作走 Cordis 服务，不要 value-import 官方模型页
+- 客户端经 `ctx.remote.llm` / `ctx.remote.settings` 调用（`listConfigurableProviders`、`settings.mutate`）。不要再用 `connection.api`。`@deepseek-ai/dsh-client-runtime` 在 0.1.2-alpha.2 未发布，不要加回 peer 或 `dsh.client.inject`
 - 源码：[src/README.md](./src/README.md)；领域逻辑：[src/core/README.md](./src/core/README.md)；设置页：[src/client/README.md](./src/client/README.md)；测试：[tests/README.md](./tests/README.md)
 
 提交前请说明改动是缺陷修复、功能增强，还是对齐新的 DSH / pi-ai schema。中英文档一并更新。根 README 与 [INSTALL.md](./INSTALL.md) 面向使用者；本文件与 `src/`、`tests/` 下的 README 面向改代码的人。

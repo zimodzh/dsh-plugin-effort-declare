@@ -19,7 +19,7 @@
 
 这是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）的设置插件：为手工添加的 OpenAI 兼容模型声明推理档位与图片输入。声明之后，对话输入框才会出现 Effort 行，并允许附加图片；未声明则按纯文本模型处理。
 
-> 社区维护的第三方 DSH 插件，并非 DeepSeek 官方项目，亦未经官方背书。要求 **DeepSeek Harness 0.1.0-rc.8** 或更高版本；更早版本未经测试。
+> 社区维护的第三方 DSH 插件，并非 DeepSeek 官方项目，亦未经官方背书。要求 **DeepSeek Harness 0.1.2-alpha.2**；更早的客户端 API（含此前对接的 0.1.0-rc.8）不再支持。
 
 ## 作用
 

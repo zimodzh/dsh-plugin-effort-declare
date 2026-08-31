@@ -9,7 +9,7 @@
 
 本插件的领域逻辑：无 React、无 Cordis 服务实例。设置页与 Vitest 都只依赖这些纯函数，因此推理档位与图片输入语义可以在不启动 DSH 的情况下回归。
 
-规范键名与 `thinkingFormat` 取值对齐 `@deepseek-ai/dsh-llm-pi-ai`（0.1.0-rc.8；0.1.1-rc.2 档位集合相同）。`thinkingFormat` 由 [`tests/fixtures/pi-ai-thinking-format-union.ts`](../../tests/fixtures/pi-ai-thinking-format-union.ts) 钉现场 schema；档位键由测试钉本地白名单。UI 可选项只来自现场 schema union。`models[].input` 的可写模态为 `text` 与 `image`，与官方 schema 一致。
+规范键名与 `thinkingFormat` 取值对齐 `@deepseek-ai/dsh-llm-pi-ai`（0.1.2-alpha.2；档位集合与 rc.8 相同，`thinkingFormat` 增加 `baseten`）。`thinkingFormat` 由 [`tests/fixtures/pi-ai-thinking-format-union.ts`](../../tests/fixtures/pi-ai-thinking-format-union.ts) 钉现场 schema；档位键由测试钉本地白名单。UI 可选项只来自现场 schema union。`models[].input` 的可写模态为 `text` 与 `image`，与官方 schema 一致。
 
 ## 这个目录里有什么
 
@@ -26,4 +26,4 @@
 | [`validate.ts`](./validate.ts) | 对单行先校验 `reasoningEfforts`，再校验 `input`。 |
 | [`attribution.ts`](./attribution.ts) | 设置页页脚：`version © 年 Stardust`。首年写死 2026，结束年由打包时的 UTC 年注入，不是用户打开 DSH 的日期。 |
 
-**缺席字段**表示默认关闭。不要把「未声明档位」写成 `reasoningEfforts: false`——`false` 在官方语义里是从 catalog 模型上剥掉推理。不要把「未声明视觉」写成 `input: []`——官方把空列表当成缺席，但坏戳记不应被重新保存。取消图片输入必须删除该键，而不是写成 `[text]`。
+**缺席字段**表示默认关闭。不要把「未声明档位」写成 `reasoningEfforts: false`——`false` 在官方语义里是从 catalog 模型上剥掉推理。不要把「未声明视觉」写成 `input: []`——官方把空列表当成缺席，但坏戳记不应被重新保存。取消图片输入必须删除该键，而不是写成 `['text']`。

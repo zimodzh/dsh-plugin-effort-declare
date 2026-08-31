@@ -18,7 +18,7 @@ export type PathOp = {
  */
 export declare function pathOps(base: readonly string[], before: unknown, after: Record<string, unknown>): PathOp[];
 export interface SaveSlices {
-    /** Profile path from `llm.providers[].settingsPath` (not a hardcoded route id). */
+    /** Profile path from `listConfigurableProviders[].settingsPath` (not a hardcoded route id). */
     settingsPath: readonly string[];
     /** Models array before the edit (user layer). */
     beforeModels: unknown;

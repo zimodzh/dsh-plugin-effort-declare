@@ -7,7 +7,7 @@
   </samp>
 </p>
 
-Back to the [README](./README.en.md). Requires DeepSeek Harness **0.1.0-rc.8** or later. Do not use `npm install`; use `dsh plugin` below.
+Back to the [README](./README.en.md). Requires DeepSeek Harness **0.1.2-alpha.2**. Earlier client APIs, including 0.1.0-rc.8, are not supported. Do not use `npm install`; use `dsh plugin` below.
 
 ## Third-party distributions: set DSH_HOME first
 
@@ -83,7 +83,7 @@ dsh plugin --profile web add file:/absolute/path/to/dsh-plugin-effort-declare
 
 ## After install
 
-Restart DSH. Open **Settings → Reasoning efforts**, declare reasoning levels per model, and check **Accepts image input** for vision models. The footer is the installed version (for example `0.1.4 © 2026 Stardust`). Bumping `package.json` version only appears after you rebuild and reinstall. Add a custom provider on the Models page first; otherwise this page has nothing to edit.
+Restart DSH. Open **Settings → Reasoning efforts**, declare reasoning levels per model, and check **Accepts image input** for vision models. The footer is the installed version (for example `0.1.5 © 2026 Stardust`). Bumping `package.json` version only appears after you rebuild and reinstall. Add a custom provider on the Models page first; otherwise this page has nothing to edit.
 
 ## Uninstall
 

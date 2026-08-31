@@ -2,7 +2,7 @@
  * Canonical thinking levels and openai-completions thinkingFormat names.
  *
  * Levels match `@deepseek-ai/dsh-llm-pi-ai` catalog.ts `THINKING_LEVELS`.
- * Formats match `SUPPORTED_THINKING_FORMATS` in the same file (rc.8).
+ * Formats match `SUPPORTED_THINKING_FORMATS` in the same file (0.1.2-alpha.2).
  * Tests pin these lists against a checked-in schema fixture
  * (`tests/fixtures/pi-ai-thinking-format-union.ts`) and the local level
  * whitelist. The settings page never offers the handwritten thinkingFormat
@@ -29,7 +29,7 @@ export const THINKING_LEVELS_WITHOUT_OFF = THINKING_LEVELS.filter(
 )
 
 /**
- * openai-completions thinkingFormat values from llm-pi-ai catalog.ts rc.8.
+ * openai-completions thinkingFormat values from llm-pi-ai catalog.ts 0.1.2-alpha.2.
  * Test pin only — not a writable UI fallback.
  */
 export const FALLBACK_THINKING_FORMATS = [
@@ -37,6 +37,7 @@ export const FALLBACK_THINKING_FORMATS = [
   'deepseek',
   'openrouter',
   'together',
+  'baseten',
   'zai',
   'qwen',
   'chat-template',

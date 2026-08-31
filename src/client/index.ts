@@ -2,11 +2,11 @@
  * dsh-plugin-effort-declare — browser half: settings.section for per-model
  * reasoning effort declarations.
  */
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
-import type { ConnectionHandle } from '@deepseek-ai/dsh-api-remotes/client'
+import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
+import type { SlotCore } from '@deepseek-ai/dsh-client-ui-slots'
 import { EffortDeclareSection } from './EffortDeclareSection.tsx'
 import type { EffortDeclareSectionInjected, Invalidation } from './EffortDeclareSection.tsx'
 import { bindSchema } from './schema-ops.ts'
@@ -21,7 +21,36 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
   }
 }
 
-export const inject = ['slots', 'locale', 'connection', 'remote', 'settingsScope', 'settingsSchema']
+/**
+ * `slots` and `connection/reset` are provided by the unpublished
+ * dsh-client-runtime wrapper. 0.1.2-alpha.2 did not publish that package;
+ * the shapes match the official models page and SlotCore.
+ */
+declare module '@deepseek-ai/cordis' {
+  interface Events {
+    /**
+     * A connection generation was (re-)established. Wire-derived caches must
+     * treat their state as stale and repull.
+     * @mode emit
+     */
+    'connection/reset'(): void
+  }
+  interface Context {
+    slots: SlotCore & {
+      inject(name: string, factory: () => unknown): unknown
+    }
+  }
+}
+
+export const inject = [
+  'slots',
+  'locale',
+  'remote',
+  'remote.llm',
+  'remote.settings',
+  'settingsScope',
+  'settingsSchema',
+]
 
 const PLUGIN_ID = 'dsh-plugin-effort-declare'
 
@@ -39,11 +68,10 @@ function mountPluginCss(): () => void {
   return () => { tag?.remove() }
 }
 
-export function apply(ctx: ClientContext): void {
+export function apply(ctx: Context): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), `${PLUGIN_ID}: dictionaries`)
   ctx.effect(() => mountPluginCss(), `${PLUGIN_ID}: css`)
 
-  const connection = ctx.get('connection') as ConnectionHandle
   const settingsSchema = ctx.settingsSchema
   const schema = bindSchema({
     rehydrate: serialized => settingsSchema.rehydrate(serialized),
@@ -97,7 +125,8 @@ export function apply(ctx: ClientContext): void {
     label: () => t('nav'),
     locale: NS,
     inject: (): EffortDeclareSectionInjected => ({
-      api: connection.api,
+      llm: ctx.remote.llm,
+      settings: ctx.remote.settings,
       describe,
       schema,
       subscribeInvalidate,

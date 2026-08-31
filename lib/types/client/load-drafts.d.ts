@@ -1,5 +1,5 @@
 /**
- * Load editable route drafts from llm.providers + the llm-pi-ai namespace.
+ * Load editable route drafts from llm.listConfigurableProviders + the llm-pi-ai namespace.
  * Drafts come from the user layer; route protocol classification may use effective value.
  *
  * First paint uses `ensure()` (idle-only). Refresh never calls `ensure()`:
@@ -8,8 +8,8 @@
  * by revision (including older delayed echoes), not ignored as a generic
  * document-updated.
  */
-import type { IApiClient } from '@deepseek-ai/dsh-api-remotes/client';
 import type { SettingsDescribeFace } from '@deepseek-ai/dsh-client-ui-settings/client';
+import type { LlmDirectoryRemote } from './remotes.ts';
 import { type RouteDraft } from '../core/drafts.ts';
 import type { SchemaOps } from './schema-ops.ts';
 export interface LoadDraftsResult {
@@ -48,6 +48,6 @@ export declare function waitForNamespaceRevisionChange(describe: MirrorDescribe,
  * `ensure`: first paint / idle recovery (official ensure only reads from idle).
  * `snapshot`: refresh after the mirror revision already moved — do not ensure.
  */
-export declare function loadDrafts(api: Pick<IApiClient, 'llm'>, describe: Pick<SettingsDescribeFace, 'ensure' | 'getSnapshot'>, schema: SchemaOps, mode?: LoadDraftsMode): Promise<LoadDraftsResult>;
+export declare function loadDrafts(llm: LlmDirectoryRemote, describe: Pick<SettingsDescribeFace, 'ensure' | 'getSnapshot'>, schema: SchemaOps, mode?: LoadDraftsMode): Promise<LoadDraftsResult>;
 export {};
 //# sourceMappingURL=load-drafts.d.ts.map

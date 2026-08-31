@@ -7,7 +7,7 @@
   </samp>
 </p>
 
-回到 [README](./README.md)。需要 DeepSeek Harness **0.1.0-rc.8** 或更高版本。不要使用 `npm install`，必须使用下面的 `dsh plugin` 命令。
+回到 [README](./README.md)。需要 DeepSeek Harness **0.1.2-alpha.2**；更早的客户端 API（含 0.1.0-rc.8）不再支持。不要使用 `npm install`，必须使用下面的 `dsh plugin` 命令。
 
 ## 第三方发行版：先设置 DSH_HOME
 
@@ -83,7 +83,7 @@ dsh plugin --profile web add file:/绝对路径/dsh-plugin-effort-declare
 
 ## 安装之后
 
-重启 DSH。打开 **设置 → 推理档位**，按模型声明推理档位；视觉模型再勾选 **支持图片输入**。页脚为当前安装版本（例如 `0.1.4 © 2026 Stardust`）。修改 `package.json` 的 version 后须重新打包并安装才会更新页脚。请先在「模型」页添加第三方提供方，本页才会出现可编辑条目。
+重启 DSH。打开 **设置 → 推理档位**，按模型声明推理档位；视觉模型再勾选 **支持图片输入**。页脚为当前安装版本（例如 `0.1.5 © 2026 Stardust`）。修改 `package.json` 的 version 后须重新打包并安装才会更新页脚。请先在「模型」页添加第三方提供方，本页才会出现可编辑条目。
 
 ## 卸载
 

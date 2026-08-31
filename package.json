@@ -1,7 +1,7 @@
 {
   "name": "dsh-plugin-effort-declare",
   "description": "Declare per-model reasoning efforts, image input, and openai-completions dialect on hand-declared llm-pi-ai routes. Writes the official namespace; does not intercept llm/stream or replace the Models page.",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": false,
   "license": "MIT",
   "repository": {
@@ -33,7 +33,6 @@
     },
     "client": {
       "inject": [
-        "@deepseek-ai/dsh-client-runtime",
         "@deepseek-ai/dsh-client-locale",
         "@deepseek-ai/dsh-client-ui-settings",
         "@deepseek-ai/dsh-api-remotes"
@@ -49,19 +48,17 @@
     "typecheck": "tsc -b --pretty false"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-api-remotes": "^0.1.0-rc.8",
-    "@deepseek-ai/dsh-client-locale": "^0.1.0-rc.8",
-    "@deepseek-ai/dsh-client-runtime": "^0.1.0-rc.8",
-    "@deepseek-ai/dsh-client-ui-settings": "^0.1.0-rc.8",
+    "@deepseek-ai/dsh-api-remotes": "^0.1.2-alpha.2",
+    "@deepseek-ai/dsh-client-locale": "^0.1.2-alpha.2",
+    "@deepseek-ai/dsh-client-ui-settings": "^0.1.2-alpha.2",
     "react": "^18.2.0"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "^4.0.1",
-    "@deepseek-ai/dsh-api-remotes": "^0.1.0-rc.8",
-    "@deepseek-ai/dsh-client-locale": "^0.1.0-rc.8",
-    "@deepseek-ai/dsh-client-runtime": "^0.1.0-rc.8",
-    "@deepseek-ai/dsh-client-ui-settings": "^0.1.0-rc.8",
-    "@deepseek-ai/dsh-client-ui-slots": "^0.1.0-rc.8",
+    "@deepseek-ai/cordis": "^4.0.2",
+    "@deepseek-ai/dsh-api-remotes": "^0.1.2-alpha.2",
+    "@deepseek-ai/dsh-client-locale": "^0.1.2-alpha.2",
+    "@deepseek-ai/dsh-client-ui-settings": "^0.1.2-alpha.2",
+    "@deepseek-ai/dsh-client-ui-slots": "^0.1.2-alpha.2",
     "@types/node": "^22.20.0",
     "@types/react": "~18.3.1",
     "lightningcss": "^1.32.0",

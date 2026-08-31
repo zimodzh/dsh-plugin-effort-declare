@@ -23,8 +23,8 @@ pnpm test
 4. 图片输入：勾选写入 `['text', 'image']`，取消删除该键（不写 `[]`）；缺席与仅 `text` 视为不支持图片。
 5. 校验：空对象、只开 Off、未知档位键、空 `input` / 仅 image / 重复 / 未知模态返回错误码且不抛。
 6. 列表过滤：catalog、`deepseek-official`、非 completions 协议不可编辑。
-7. `thinkingFormat` 由 [`fixtures/pi-ai-thinking-format-union.ts`](./fixtures/pi-ai-thinking-format-union.ts) 钉现场 schema（与 llm-pi-ai 0.1.0-rc.8 / 0.1.1-rc.2 列表相同）；schema 空时 UI 选项为空。
-8. `loadDrafts` 草稿来自 `user` 不是 `value`；`cloneModels` 跳过非对象行；保存后全卡 revision；按 id 三路合并（增删模型、清除声明、只 bump revision 不误报冲突；`input` 与 `reasoningEfforts` 独立 overlay）；generation；dirty 与 pathOps 一致。刷新不走 `ensure()`；等镜像 revision 追上（快照已经更新也不挂起）；无冲突 reload 清 conflict/error notice；自己的 document-updated revision（含更旧回声）不当成别人的冲突。Off value 模式写入 trim 后的字符串。
+7. `thinkingFormat` 由 [`fixtures/pi-ai-thinking-format-union.ts`](./fixtures/pi-ai-thinking-format-union.ts) 钉现场 schema（与 llm-pi-ai 0.1.2-alpha.2 列表相同）；schema 空时 UI 选项为空。
+8. `loadDrafts` 调 `listConfigurableProviders`（`value` 即数组，无 `.providers` 包装）；草稿来自 `user` 不是 `value`；`cloneModels` 跳过非对象行；保存后全卡 revision；按 id 三路合并（增删模型、清除声明、只 bump revision 不误报冲突；`input` 与 `reasoningEfforts` 独立 overlay）；generation；dirty 与 pathOps 一致。刷新不走 `ensure()`；等镜像 revision 追上（快照已经更新也不挂起）；无冲突 reload 清 conflict/error notice；自己的 document-updated revision（含更旧回声）不当成别人的冲突。Off value 模式写入 trim 后的字符串。
 9. `validateSaveDraft`：schema 失败则阻断 mutate；节点缺失则跳过。
 10. 页脚 `formatAttribution`：同年只显示一个年份，跨年用 en dash；空版本或结束年早于 2026 会抛错。
 

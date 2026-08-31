@@ -6,7 +6,7 @@ import {
 } from './catalog.ts'
 import { getPath, isPlainObject } from './paths.ts'
 
-/** Directory row from `llm.providers()` (the fields v1 filtering reads). */
+/** Directory row from `llm.listConfigurableProviders()` (the fields v1 filtering reads). */
 export interface ProviderDirectoryEntry {
   provider: string
   displayName?: string

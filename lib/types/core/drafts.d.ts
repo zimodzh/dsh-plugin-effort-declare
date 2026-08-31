@@ -2,7 +2,7 @@
 export interface RouteDraft {
     provider: string;
     displayName: string;
-    /** Path inside the llm-pi-ai section (`llm.providers[].settingsPath`). */
+    /** Path inside the llm-pi-ai section (`listConfigurableProviders[].settingsPath`). */
     settingsPath: readonly string[];
     /** Namespace revision (one value for the whole llm-pi-ai document). */
     revision: number;

@@ -1,5 +1,5 @@
 /**
- * Load editable route drafts from llm.providers + the llm-pi-ai namespace.
+ * Load editable route drafts from llm.listConfigurableProviders + the llm-pi-ai namespace.
  * Drafts come from the user layer; route protocol classification may use effective value.
  *
  * First paint uses `ensure()` (idle-only). Refresh never calls `ensure()`:
@@ -8,8 +8,8 @@
  * by revision (including older delayed echoes), not ignored as a generic
  * document-updated.
  */
-import type { IApiClient, SettingsNamespaceView } from '@deepseek-ai/dsh-api-remotes/client'
 import type { SettingsDescribeFace } from '@deepseek-ai/dsh-client-ui-settings/client'
+import type { LlmDirectoryRemote } from './remotes.ts'
 import {
   LLM_PI_AI_NS,
   SCHEMA_PROBE_ROUTE,
@@ -136,7 +136,7 @@ export async function waitForNamespaceRevisionChange(
 }
 
 async function assembleDrafts(
-  api: Pick<IApiClient, 'llm'>,
+  llm: LlmDirectoryRemote,
   describe: Pick<SettingsDescribeFace, 'getSnapshot'>,
   schema: SchemaOps,
 ): Promise<LoadDraftsResult> {
@@ -144,16 +144,16 @@ async function assembleDrafts(
   if (mirrored.view === undefined) {
     return { writable: false, formats: [], drafts: [], error: mirrored.error ?? undefined }
   }
-  const providersResponse = await api.llm.providers({})
-  if (!providersResponse.result.ok) {
+  const providersResponse = await llm.listConfigurableProviders()
+  if (!providersResponse.ok) {
     return {
       writable: mirrored.view.writable,
       formats: [],
       drafts: [],
-      error: providersResponse.result.error.message,
+      error: providersResponse.error.message,
     }
   }
-  const namespaces = new Map(mirrored.view.namespaces.map((view: SettingsNamespaceView) => [view.ns, view]))
+  const namespaces = new Map(mirrored.view.namespaces.map(view => [view.ns, view]))
   const pi = namespaces.get(LLM_PI_AI_NS)
   let formats: string[] = []
   let schemaDefaultApi: string | undefined
@@ -169,7 +169,7 @@ async function assembleDrafts(
     }
   }
   const drafts: RouteDraft[] = []
-  for (const entry of providersResponse.result.value.providers) {
+  for (const entry of providersResponse.value) {
     const settingsPath = entry.settingsPath !== undefined && entry.settingsPath.length > 0
       ? [...entry.settingsPath]
       : ['providers', entry.provider]
@@ -191,11 +191,11 @@ async function assembleDrafts(
  * `snapshot`: refresh after the mirror revision already moved — do not ensure.
  */
 export async function loadDrafts(
-  api: Pick<IApiClient, 'llm'>,
+  llm: LlmDirectoryRemote,
   describe: Pick<SettingsDescribeFace, 'ensure' | 'getSnapshot'>,
   schema: SchemaOps,
   mode: LoadDraftsMode = 'ensure',
 ): Promise<LoadDraftsResult> {
   if (mode === 'ensure') await describe.ensure()
-  return assembleDrafts(api, describe, schema)
+  return assembleDrafts(llm, describe, schema)
 }
